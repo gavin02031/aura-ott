@@ -17,6 +17,7 @@ import Profile from './pages/Profile.jsx';
 import Profiles from './pages/Profiles.jsx';
 import Startup from './components/Startup.jsx';
 import Sidebar from './components/Sidebar.jsx';
+import FriendsSidebar from './components/FriendsSidebar.jsx';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function AppContent() {
   const { currentProfile } = useProfiles();
   const [showStartup, setShowStartup] = React.useState(true);
   const [showSearch, setShowSearch] = React.useState(false);
+  const [showFriends, setShowFriends] = React.useState(false);
   const [trailerState, setTrailerState] = React.useState({
     open: false,
     item: null
@@ -66,9 +68,15 @@ function AppContent() {
     <ProgressProvider>
       <MyListProvider>
         <div className="min-h-screen bg-aura-bg text-white">
-          <Sidebar onOpenSearch={() => setShowSearch(true)} />
+          <Sidebar
+            onOpenSearch={() => setShowSearch(true)}
+            onOpenFriends={() => setShowFriends(true)}
+          />
           <div className="md:hidden">
-            <Header onOpenSearch={() => setShowSearch(true)} />
+            <Header
+              onOpenSearch={() => setShowSearch(true)}
+              onOpenFriends={() => setShowFriends(true)}
+            />
           </div>
           <main className="pt-16 md:pt-0 md:pl-20">
             <Routes>
@@ -90,6 +98,13 @@ function AppContent() {
             <Search
               open={showSearch}
               onClose={() => setShowSearch(false)}
+            />
+          )}
+
+          {showFriends && (
+            <FriendsSidebar
+              open={showFriends}
+              onClose={() => setShowFriends(false)}
             />
           )}
         </div>

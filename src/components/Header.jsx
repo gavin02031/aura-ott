@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useProfiles } from '../context/ProfileContext.jsx';
 
-function Header({ onOpenSearch }) {
+function Header({ onOpenSearch, onOpenFriends }) {
   const { currentProfile } = useProfiles();
   const [scrolled, setScrolled] = React.useState(false);
 
@@ -113,6 +113,29 @@ function Header({ onOpenSearch }) {
               <circle cx="11" cy="11" r="6" />
             </svg>
           </button>
+
+          <button
+            type="button"
+            onClick={onOpenFriends}
+            className="aura-icon-button"
+            aria-label="Friends"
+            title="Friends"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="h-5 w-5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </button>
+
           <Link to="/profile" className="flex items-center gap-2">
             <img src={currentProfile.avatar} alt={currentProfile.name} className="w-8 h-8 rounded-full object-cover" />
             <span className="text-sm font-medium text-white">{currentProfile.name}</span>
