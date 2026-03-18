@@ -12,3 +12,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
+// PWA install support (Add to Home Screen / standalone)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .catch(() => {
+        // Non-fatal; iOS can still "Add to Home Screen" without SW caching.
+      });
+  });
+}
+
