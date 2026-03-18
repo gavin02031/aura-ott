@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-aura-bg text-white font-sans antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer components {
+  .aura-glass {
+    @apply bg-black bg-opacity-40 backdrop-blur-xl border border-white border-opacity-10;
+  }
+
+  .aura-panel {
+    @apply rounded-xl bg-aura-surface bg-opacity-70 ring-1 ring-white ring-opacity-10 backdrop-blur-xl;
+  }
+
+  .aura-icon-button {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full bg-black bg-opacity-40 text-white text-opacity-80 ring-1 ring-white ring-opacity-10 backdrop-blur-xl transition hover:bg-opacity-60 hover:text-white hover:text-opacity-100;
+  }
+
+  .aura-section-title {
+    @apply flex items-center gap-3 text-xl font-bold tracking-wide text-white text-opacity-95 md:text-2xl;
+  }
+  .aura-section-title::before {
+    content: '';
+    @apply h-4 w-[2px] rounded-full bg-aura-red;
+  }
+}
+
