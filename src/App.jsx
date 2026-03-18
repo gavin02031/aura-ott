@@ -18,6 +18,7 @@ import Profiles from './pages/Profiles.jsx';
 import Startup from './components/Startup.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import FriendsSidebar from './components/FriendsSidebar.jsx';
+import WatchPartyInvitesLayer from './components/WatchPartyInvitesLayer.jsx';
 
 function App() {
   return (
@@ -107,6 +108,8 @@ function AppContent() {
               onClose={() => setShowFriends(false)}
             />
           )}
+
+          <WatchPartyInvitesLayer enabled />
         </div>
       </MyListProvider>
     </ProgressProvider>

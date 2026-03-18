@@ -1,15 +1,19 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getMovieDetails, getTvDetails, getTvSeason, getImageUrl } from '../api/tmdb.js';
 import { useProgress } from '../context/ProgressContext.jsx';
 import { useMyList } from '../context/MyListContext.jsx';
 import { useRatings } from '../context/RatingContext.jsx';
+import { supabase } from '../lib/supabase.js';
 import TrailerModal from '../components/TrailerModal.jsx';
 import Cast from '../components/Cast.jsx';
+import { useWatchPartyRoom } from '../hooks/useWatchPartyRoom.js';
+import WatchPartyRoomOverlay from '../components/WatchPartyRoomOverlay.jsx';
 
 function Player({ type }) {
   const { id, seasonNumber, episodeNumber } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { upsertMetadata } = useProgress();
   const { isInMyList, toggleMyList } = useMyList();
   const { getRating, setRating } = useRatings();
@@ -19,10 +23,27 @@ function Player({ type }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [showPlayer, setShowPlayer] = React.useState(false);
+  const [playerSrc, setPlayerSrc] = React.useState(null);
   const [showTrailer, setShowTrailer] = React.useState(false);
   const [selectedSeason, setSelectedSeason] = React.useState(
     Number(seasonNumber) || 1
   );
+
+  // Watch party:
+  // - If `wp` exists in the URL, join that room
+  // - Otherwise, starting a party will create a room id and update the URL
+  const wpFromUrl = searchParams.get('wp');
+  const [roomId, setRoomId] = React.useState(wpFromUrl || null);
+
+  React.useEffect(() => {
+    setRoomId(wpFromUrl || null);
+  }, [wpFromUrl]);
+
+  const currentTimeRef = React.useRef(0);
+  const playbackStateRef = React.useRef('paused'); // 'playing' | 'paused'
+  const lastLocalBroadcastAtRef = React.useRef(0);
+  const lastRemoteAppliedAtRef = React.useRef(0);
+  const isApplyingRemoteRef = React.useRef(false);
 
   const openTrailer = () => {
     if (details) {
@@ -154,9 +175,216 @@ function Player({ type }) {
 
   const synopsis = details?.overview || '';
 
-  const playerSrc = isMovie
-    ? `https://www.vidking.net/embed/movie/${id}?color=e50914&autoPlay=true`
-    : `https://www.vidking.net/embed/tv/${id}/${seasonNumber || selectedSeason}/${episodeNumber || 1}?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true&progress=0`;
+  const buildPlayerSrc = React.useCallback(
+    (autoPlay, timestamp) => {
+      const ts = Number(timestamp) || 0;
+      const ap = autoPlay ? 'true' : 'false';
+
+      if (isMovie) {
+        return `https://www.vidking.net/embed/movie/${id}?color=e50914&autoPlay=${ap}&progress=${ts}`;
+      }
+
+      const tvSeason = selectedSeason || Number(seasonNumber) || 1;
+      const tvEpisode = Number(episodeNumber) || 1;
+
+      return `https://www.vidking.net/embed/tv/${id}/${tvSeason}/${tvEpisode}?color=e50914&autoPlay=${ap}&nextEpisode=true&episodeSelector=true&progress=${ts}`;
+    },
+    [id, isMovie, episodeNumber, seasonNumber, selectedSeason]
+  );
+
+  const handleRemoteVideoSync = React.useCallback(
+    ({ state, timestamp }) => {
+      const desiredState = state === 'playing' ? 'playing' : 'paused';
+      const desiredTime = Number(timestamp) || 0;
+
+      const now = Date.now();
+      const last = lastRemoteAppliedAtRef.current;
+      const current = currentTimeRef.current ?? 0;
+      const diff = Math.abs(current - desiredTime);
+
+      if (now - last < 1800 && diff < 0.9) return;
+      if (desiredState === playbackStateRef.current && diff < 0.35) return;
+
+      lastRemoteAppliedAtRef.current = now;
+      isApplyingRemoteRef.current = true;
+
+      setShowPlayer(true);
+      setPlayerSrc(buildPlayerSrc(desiredState === 'playing', desiredTime));
+      playbackStateRef.current = desiredState;
+
+      window.setTimeout(() => {
+        isApplyingRemoteRef.current = false;
+      }, 1200);
+    },
+    [buildPlayerSrc]
+  );
+
+  const {
+    connected: wpConnected,
+    members: wpMembers,
+    messages: wpMessages,
+    sendVideoSync,
+    sendChatMessage
+  } = useWatchPartyRoom(roomId, { onRemoteVideoSync: handleRemoteVideoSync });
+
+  const closeWatchParty = React.useCallback(() => {
+    setRoomId(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('wp');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const startWatchParty = React.useCallback(() => {
+    const newRoomId =
+      (crypto?.randomUUID && crypto.randomUUID()) ||
+      `room-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    setRoomId(newRoomId);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('wp', newRoomId);
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const inviteToFriend = React.useCallback(
+    async (targetUserId) => {
+      if (!roomId) return;
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const user = authData?.user;
+        if (!user) return;
+
+        let inviter = { username: user.email ?? user.id, avatar_url: null };
+        try {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('username,avatar_url')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (prof) {
+            inviter = {
+              username: prof.username ?? inviter.username,
+              avatar_url: prof.avatar_url ?? null
+            };
+          }
+        } catch {
+          // ignore profile fetch errors
+        }
+
+        const content = isMovie
+          ? { type: 'movie', id: Number(id) }
+          : {
+              type: 'tv',
+              id: Number(id),
+              seasonNumber: Number(selectedSeason) || Number(seasonNumber) || 1,
+              episodeNumber: Number(episodeNumber) || 1
+            };
+
+        const channel = supabase.channel(`invites-${targetUserId}`);
+
+        await channel.subscribe((status) => {
+          if (status !== 'SUBSCRIBED') return;
+          channel.send({
+            type: 'broadcast',
+            event: 'watch-party-invite',
+            payload: { roomId, inviter, content }
+          });
+        });
+
+        window.setTimeout(() => {
+          supabase.removeChannel(channel);
+        }, 600);
+      } catch {
+        // ignore invite errors
+      }
+    },
+    [
+      roomId,
+      id,
+      episodeNumber,
+      isMovie,
+      selectedSeason,
+      seasonNumber,
+      supabase
+    ]
+  );
+
+  // Detect local playback events from the VidKing iframe and broadcast them to the room.
+  React.useEffect(() => {
+    if (!roomId) return;
+
+    const onMessage = (event) => {
+      if (event.origin !== 'https://www.vidking.net') return;
+
+      const payload =
+        typeof event.data === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(event.data);
+              } catch {
+                return null;
+              }
+            })()
+          : event.data;
+
+      if (!payload || payload.type !== 'PLAYER_EVENT' || !payload.data) return;
+
+      const data = payload.data;
+      if (String(data.id) !== String(id)) return;
+
+      const expectedMediaType = isMovie ? 'movie' : 'tv';
+      if (data.mediaType !== expectedMediaType) return;
+
+      if (typeof data.currentTime !== 'number') return;
+
+      const currentTime = data.currentTime;
+      currentTimeRef.current = currentTime;
+
+      const eventName = typeof data.event === 'string' ? data.event : null;
+
+      // While applying a remote sync, do not broadcast back (prevents loops).
+      if (isApplyingRemoteRef.current) return;
+
+      if (eventName === 'play') {
+        playbackStateRef.current = 'playing';
+        lastLocalBroadcastAtRef.current = Date.now();
+        sendVideoSync('playing', currentTime);
+        return;
+      }
+
+      if (eventName === 'pause') {
+        playbackStateRef.current = 'paused';
+        lastLocalBroadcastAtRef.current = Date.now();
+        sendVideoSync('paused', currentTime);
+        return;
+      }
+
+      if (eventName === 'seeked') {
+        const desired =
+          playbackStateRef.current === 'playing' ? 'playing' : 'paused';
+        lastLocalBroadcastAtRef.current = Date.now();
+        sendVideoSync(desired, currentTime);
+        return;
+      }
+
+      // Fallback: periodic re-sync while playing.
+      const now = Date.now();
+      if (playbackStateRef.current === 'playing') {
+        if (eventName === 'timeupdate' || !eventName) {
+          if (now - lastLocalBroadcastAtRef.current >= 5000) {
+            lastLocalBroadcastAtRef.current = now;
+            sendVideoSync('playing', currentTime);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [roomId, sendVideoSync, id, isMovie]);
 
   return (
     <div className="pb-12">
@@ -214,13 +442,39 @@ function Player({ type }) {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowPlayer(true)}
+              onClick={() => {
+                setShowPlayer(true);
+                const ts = currentTimeRef.current ?? 0;
+                setPlayerSrc(buildPlayerSrc(true, ts));
+                playbackStateRef.current = 'playing';
+                if (roomId) sendVideoSync('playing', ts);
+              }}
               className="inline-flex items-center gap-2 rounded bg-white px-5 py-2 text-sm font-semibold text-black shadow-md shadow-black/40 transition hover:bg-gray-200 md:px-6 md:py-2.5 md:text-base"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                 <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
               </svg>
               Play
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (roomId) return;
+                startWatchParty();
+              }}
+              disabled={!!roomId}
+              className={`inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-semibold backdrop-blur transition md:px-5 md:py-2.5 ${
+                roomId
+                  ? 'text-white/60 bg-white/5 cursor-not-allowed'
+                  : 'text-white bg-white/5 border border-[#E50914]/60 hover:bg-white/10'
+              }`}
+            >
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-[#E50914] text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.1 10.1 12 6 9.9 10.1 6 12l3.9 1.9L12 18l2.1-4.1L18 12z" />
+                </svg>
+              </span>
+              Watch Party
             </button>
             <button
               type="button"
@@ -399,6 +653,20 @@ function Player({ type }) {
 
       {showTrailer && (
         <TrailerModal item={details} onClose={closeTrailer} />
+      )}
+
+      {roomId && (
+        <WatchPartyRoomOverlay
+          roomId={roomId}
+          members={wpMembers}
+          messages={wpMessages}
+          connected={wpConnected}
+          onClose={closeWatchParty}
+          onSendChatMessage={sendChatMessage}
+          onSendVideoSync={sendVideoSync}
+          onInviteToFriend={inviteToFriend}
+          contentLabel={`${title}`}
+        />
       )}
 
       {loading && !details && (
