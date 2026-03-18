@@ -2,7 +2,7 @@ import React from 'react';
 import { getTrailer } from '../api/kinocheck.js';
 import { useNomadSettings } from '../context/NomadSettingsContext.jsx';
 
-function HeroTrailer({ item, isMuted }) {
+function HeroTrailer({ item, isMuted, controls = false }) {
   const { settings } = useNomadSettings();
   const [trailer, setTrailer] = React.useState(null);
   const [error, setError] = React.useState(null);
@@ -42,9 +42,11 @@ function HeroTrailer({ item, isMuted }) {
     <div className="absolute inset-0 w-full h-full">
       <iframe
         title={`${item.title || item.name} trailer`}
-        src={`https://www.youtube.com/embed/${trailer.youtube_video_id}?autoplay=1&rel=0&controls=0&showinfo=0&mute=${isMuted ? 1 : 0}`}
+        src={`https://www.youtube.com/embed/${trailer.youtube_video_id}?autoplay=1&rel=0&controls=${
+          controls ? 1 : 0
+        }&showinfo=0&mute=${isMuted ? 1 : 0}`}
         allow="autoplay; fullscreen"
-        className="w-full h-full border-none pointer-events-none"
+        className={`w-full h-full border-none ${controls ? '' : 'pointer-events-none'}`}
       />
     </div>
   );

@@ -10,6 +10,8 @@ function HeroBanner({ item, onWatchTrailer, onHoverChange }) {
   const { upsertMetadata, progressItems } = useProgress();
   const { isInMyList, toggleMyList } = useMyList();
   const [isHovering, setIsHovering] = React.useState(false);
+  const [isHoverNone, setIsHoverNone] = React.useState(false);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   const [isMuted, setIsMuted] = React.useState(true);
   const [isVisible, setIsVisible] = React.useState(true);
 
@@ -21,6 +23,36 @@ function HeroBanner({ item, onWatchTrailer, onHoverChange }) {
 
     return () => clearTimeout(timeout);
   }, [item]);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia?.('(hover: none)');
+    if (!mql) return;
+
+    const update = () => setIsHoverNone(mql.matches);
+    update();
+
+    // Safari uses addListener; others use addEventListener.
+    if (mql.addEventListener) mql.addEventListener('change', update);
+    else mql.addListener(update);
+
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', update);
+      else mql.removeListener(update);
+    };
+  }, []);
+
+  // Keep rotation paused while trailer preview is active on touch devices.
+  React.useEffect(() => {
+    if (!isHoverNone) return;
+    onHoverChange?.(previewOpen);
+  }, [isHoverNone, previewOpen, onHoverChange]);
+
+  React.useEffect(() => {
+    if (!isHoverNone || !previewOpen) return;
+
+    const t = window.setTimeout(() => setPreviewOpen(false), 8000);
+    return () => window.clearTimeout(t);
+  }, [isHoverNone, previewOpen]);
 
   if (!item) return null;
 
@@ -34,6 +66,8 @@ function HeroBanner({ item, onWatchTrailer, onHoverChange }) {
     item.backdrop_path || item.poster_path,
     'w1280'
   );
+
+  const showPreview = isHoverNone ? previewOpen : isHovering;
 
   const handlePlay = () => {
     const id = item.id;
@@ -65,15 +99,24 @@ function HeroBanner({ item, onWatchTrailer, onHoverChange }) {
     <section 
       className={`relative h-[85vh] min-h-[520px] w-full overflow-hidden bg-aura-bg text-white transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onMouseEnter={() => {
+        if (isHoverNone) return;
         setIsHovering(true);
         onHoverChange?.(true);
       }}
       onMouseLeave={() => {
+        if (isHoverNone) return;
         setIsHovering(false);
         onHoverChange?.(false);
       }}
+      onPointerDown={(e) => {
+        // On touch devices, "hover preview" should be driven by a tap.
+        if (!isHoverNone) return;
+        const target = e.target;
+        if (target && typeof target.closest === 'function' && target.closest('button')) return;
+        setPreviewOpen(true);
+      }}
     >
-      <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${isHovering ? 'opacity-0' : 'opacity-100'}`}>
+      <div className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${showPreview ? 'opacity-0' : 'opacity-100'}`}>
         {backdrop ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -88,7 +131,9 @@ function HeroBanner({ item, onWatchTrailer, onHoverChange }) {
         <div className="absolute inset-0 bg-[radial-gradient(60%_80%_at_20%_40%,rgba(10,14,23,0.92)_0%,rgba(10,14,23,0.55)_35%,rgba(10,14,23,0)_70%)]" />
       </div>
 
-      {isHovering && <HeroTrailer item={item} isMuted={isMuted} />}
+      {showPreview && (
+        <HeroTrailer item={item} isMuted={isMuted} controls={isHoverNone} />
+      )}
 
       <div className="relative z-10 flex h-full items-end">
         <div className="flex w-full max-w-4xl flex-col gap-5 px-6 pb-12 md:px-24 md:pb-16">
