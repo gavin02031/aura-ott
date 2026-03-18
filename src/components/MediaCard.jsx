@@ -21,6 +21,29 @@ function MediaCard({
   const navigate = useNavigate();
   const { upsertMetadata, progressItems } = useProgress();
   const { isInMyList, toggleMyList } = useMyList();
+  const [isHoverNone, setIsHoverNone] = React.useState(false);
+  const [revealOnTouch, setRevealOnTouch] = React.useState(false);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia?.('(hover: none)');
+    if (!mql) return;
+    const update = () => setIsHoverNone(mql.matches);
+    update();
+    if (mql.addEventListener) mql.addEventListener('change', update);
+    else mql.addListener(update);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', update);
+      else mql.removeListener(update);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!isHoverNone) return;
+    if (!revealOnTouch) return;
+
+    const t = window.setTimeout(() => setRevealOnTouch(false), 6500);
+    return () => window.clearTimeout(t);
+  }, [isHoverNone, revealOnTouch]);
 
   if (!item) return null;
 
@@ -70,13 +93,23 @@ function MediaCard({
     }
   };
 
+  const handleCardClick = (e) => {
+    if (isHoverNone && !revealOnTouch) {
+      e.preventDefault();
+      e.stopPropagation();
+      setRevealOnTouch(true);
+      return;
+    }
+    goToDetails();
+  };
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={goToDetails}
+      onClick={handleCardClick}
       onKeyDown={handleKeyDown}
-      className={`group relative flex-shrink-0 overflow-hidden rounded-xl bg-aura-surface/30 ring-1 ring-white/10 transition-all duration-300 ease-max hover:scale-105 hover:z-20 hover:shadow-cinematic-lg ${sizeClasses}`}
+      className={`group relative flex-shrink-0 overflow-hidden rounded-xl bg-aura-surface/30 ring-1 ring-white/10 transition-all duration-300 ease-max hover:scale-105 active:scale-105 hover:z-20 hover:shadow-cinematic-lg ${sizeClasses}`}
     >
       {image ? (
         <img
@@ -92,11 +125,19 @@ function MediaCard({
       )}
 
       {/* Clean default: no text. Hover reveal only */}
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 ease-max group-hover:opacity-100">
+      <div
+        className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 ease-max group-hover:opacity-100 ${
+          revealOnTouch ? 'opacity-100' : ''
+        }`}
+      >
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
       </div>
 
-      <div className="absolute inset-x-2 bottom-2 translate-y-2 opacity-0 transition-all duration-300 ease-max group-hover:translate-y-0 group-hover:opacity-100">
+      <div
+        className={`absolute inset-x-2 bottom-2 translate-y-2 opacity-0 transition-all duration-300 ease-max group-hover:translate-y-0 group-hover:opacity-100 ${
+          revealOnTouch ? 'translate-y-0 opacity-100' : ''
+        }`}
+      >
         <div className="flex items-end justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">{title}</p>

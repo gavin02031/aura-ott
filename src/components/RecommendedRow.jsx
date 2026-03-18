@@ -46,7 +46,7 @@ function RowSection({ title, items }) {
           <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-24 bg-gradient-to-r from-black/70 via-black/20 to-transparent opacity-0 transition group-hover:opacity-100 md:block" />
           <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-24 bg-gradient-to-l from-black/70 via-black/20 to-transparent opacity-0 transition group-hover:opacity-100 md:block" />
 
-          <div className="absolute inset-y-0 left-0 hidden items-center pl-2 opacity-0 transition group-hover:opacity-100 md:flex">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             <button
               type="button"
               onClick={() => scroll('left')}
@@ -70,7 +70,7 @@ function RowSection({ title, items }) {
             </button>
           </div>
 
-          <div className="absolute inset-y-0 right-0 hidden items-center pr-2 opacity-0 transition group-hover:opacity-100 md:flex">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             <button
               type="button"
               onClick={() => scroll('right')}
