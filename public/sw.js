@@ -1,10 +1,11 @@
 /* Minimal service worker for PWA install.
    iOS may not fully support SW features, but registration is safe. */
-const CACHE_VERSION = 'aura-cache-v2';
+const CACHE_VERSION = 'aura-cache-v3';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
-// Cache only the app shell + PWA essentials.
-const ASSETS = ['/','/index.html','/manifest.webmanifest','/favicon.svg'];
+// Cache ONLY PWA essentials. Never cache `/` or `/index.html` because it can point
+// to old hashed Vite asset filenames after a redeploy (causing 404 "blue/white" screens).
+const ASSETS = ['/manifest.webmanifest', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -37,14 +38,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Only cache a small allowlist; everything else goes network-only.
-  const shouldHandle =
-    url.pathname === '/' ||
-    url.pathname === '/index.html' ||
-    url.pathname === '/manifest.webmanifest' ||
-    url.pathname === '/favicon.svg';
+  // Never cache or serve stale HTML; always go network.
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(fetch(req));
+    return;
+  }
 
-  if (!shouldHandle) return;
+  // Cache only manifest + icons (cache-first).
+  const shouldCache = url.pathname === '/manifest.webmanifest' || url.pathname === '/favicon.svg';
+  if (!shouldCache) return;
 
   event.respondWith(
     caches.match(req).then((cached) => {
