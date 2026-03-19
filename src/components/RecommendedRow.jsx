@@ -11,6 +11,7 @@ import {
   getSimilarTv,
   discoverAdvanced
 } from '../api/tmdb.js';
+import { getGroqPersonalizedPicks } from '../api/groqRecommendations.js';
 
 function RowSection({ title, items }) {
   const scrollRef = React.useRef(null);
@@ -106,6 +107,7 @@ function RecommendedRow() {
   const [similarRow, setSimilarRow] = React.useState(null);
   const [keywordRow, setKeywordRow] = React.useState(null);
   const [genreRow, setGenreRow] = React.useState(null);
+  const [aiRow, setAiRow] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
 
   const ratedItems = React.useMemo(() => {
@@ -153,9 +155,13 @@ function RecommendedRow() {
     async function buildRecommendations() {
       setLoading(true);
       try {
+        if (cancelled) return;
         const genreScores = {};
         const keywordScores = {};
         const dislikedGenres = new Set();
+        let similarItemsLocal = [];
+        let keywordItemsLocal = [];
+        let genreItemsLocal = [];
 
         const recentCutoff = [...ratedItems]
           .filter((r) => r.value === 'like' || r.value === 'love')
@@ -252,6 +258,7 @@ function RecommendedRow() {
             }));
 
           if (normalized.length) {
+            similarItemsLocal = normalized;
             setSimilarRow({
               title: `Because you loved ${meta.title}`,
               items: normalized
@@ -283,6 +290,7 @@ function RecommendedRow() {
             }));
 
           if (normalized.length) {
+            keywordItemsLocal = normalized;
             setKeywordRow({
               title: 'Deep into what you love',
               items: normalized
@@ -317,10 +325,94 @@ function RecommendedRow() {
             }));
 
           if (normalized.length) {
+            genreItemsLocal = normalized;
             setGenreRow({
               title: 'Hidden gems in your favorite genres',
               items: normalized
             });
+          }
+        }
+
+        // AI two-stage personalization:
+        // Stage 1 + 2 are both handled by the edge function using liked data + candidate pool.
+        const likedForAi = topRated
+          .filter((r) => r.meta && (r.value === 'like' || r.value === 'love'))
+          .map((r) => {
+            const details = detailCache[r.id];
+            const genres = (details?.genres || []).map((g) => g?.name).filter(Boolean);
+            return {
+              id: Number(r.meta.id),
+              title: r.meta.title,
+              mediaType: r.meta.media_type,
+              genres,
+              overview: details?.overview || ''
+            };
+          })
+          .slice(0, 20);
+
+        const candidateMap = new Map();
+        const pushCandidate = (item) => {
+          if (!item?.id) return;
+          const key = `${item.media_type || 'movie'}:${item.id}`;
+          if (!candidateMap.has(key)) candidateMap.set(key, item);
+        };
+        similarItemsLocal.forEach(pushCandidate);
+        keywordItemsLocal.forEach(pushCandidate);
+        genreItemsLocal.forEach(pushCandidate);
+
+        // If the rows above haven't committed state yet in this render,
+        // also include normalized arrays directly by looking at current temp variables:
+        // no-op fallback: we can rebuild from rating-based path if map is empty.
+        if (candidateMap.size === 0) {
+          // lightweight fallback pool from genre discover
+          const fallbackGenre = Object.entries(genreScores)
+            .sort((a, b) => b[1] - a[1])[0]?.[0];
+          if (fallbackGenre) {
+            const fallback = await discoverAdvanced({
+              mediaType: 'movie',
+              with_genres: fallbackGenre,
+              without_genres: Array.from(dislikedGenres).join(',')
+            });
+            (fallback || [])
+              .slice(0, 30)
+              .forEach((item) =>
+                pushCandidate({
+                  id: item.id,
+                  title: item.title || item.name,
+                  name: item.title || item.name,
+                  poster_path: item.poster_path,
+                  media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie'),
+                  overview: item.overview,
+                  genre_ids: item.genre_ids,
+                  vote_average: item.vote_average,
+                  popularity: item.popularity
+                })
+              );
+          }
+        }
+
+        const candidateArr = Array.from(candidateMap.values()).slice(0, 140);
+        if (likedForAi.length && candidateArr.length) {
+          const ai = await getGroqPersonalizedPicks({
+            likedItems: likedForAi,
+            candidates: candidateArr,
+            limitPerRow: 15,
+            avoidStrength: 'strong'
+          });
+
+          if (!cancelled && ai?.picks?.length) {
+            const byId = new Map(candidateArr.map((c) => [Number(c.id), c]));
+            const ranked = ai.picks
+              .map((id) => byId.get(Number(id)))
+              .filter(Boolean)
+              .slice(0, 15);
+
+            if (ranked.length) {
+              setAiRow({
+                title: ai.rowTitle || 'Tailored for you',
+                items: ranked
+              });
+            }
           }
         }
       } finally {
@@ -337,7 +429,7 @@ function RecommendedRow() {
 
   if (!ratedItems.length) return null;
 
-  const rows = [similarRow, keywordRow, genreRow].filter(Boolean);
+  const rows = [aiRow, similarRow, keywordRow, genreRow].filter(Boolean);
   if (!rows.length) return null;
 
   return (
