@@ -37,6 +37,7 @@ export default function WatchPartyInvitesLayer({ enabled = true }) {
     let myId = null;
 
     const setup = async () => {
+      if (!supabase) return;
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;
       if (!user) return;

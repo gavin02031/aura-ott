@@ -16,6 +16,11 @@ export function usePresence() {
     let channel = null;
 
     const run = async () => {
+      if (!supabase) {
+        if (alive) setLoading(false);
+        return;
+      }
+
       setLoading(true);
 
       const { data: authData } = await supabase.auth.getUser();

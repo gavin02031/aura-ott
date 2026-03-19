@@ -68,6 +68,7 @@ export function useWatchPartyRoom(roomId, { onRemoteVideoSync } = {}) {
 
     async function setup() {
       if (!roomId) return;
+      if (!supabase) return;
 
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;

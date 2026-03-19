@@ -253,6 +253,7 @@ function Player({ type }) {
     async (targetUserId) => {
       if (!roomId) return;
       try {
+        if (!supabase) return;
         const { data: authData } = await supabase.auth.getUser();
         const user = authData?.user;
         if (!user) return;

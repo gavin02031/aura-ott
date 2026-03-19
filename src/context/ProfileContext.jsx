@@ -57,6 +57,12 @@ export function ProfileProvider({ children }) {
     const load = async () => {
       setAuthLoading(true);
       try {
+        if (!supabase) {
+          setCurrentProfile(null);
+          setProfiles([]);
+          return;
+        }
+
         const { data: authData, error: userErr } = await supabase.auth.getUser();
         if (userErr) throw userErr;
 
