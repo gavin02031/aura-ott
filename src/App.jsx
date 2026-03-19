@@ -82,6 +82,7 @@ function AppContent() {
     <ProgressProvider>
       <MyListProvider>
         <GlobalPresenceTracker />
+        {invitesLayer}
         <div className="min-h-screen bg-aura-bg text-white">
           <Sidebar
             onOpenSearch={() => setShowSearch(true)}
