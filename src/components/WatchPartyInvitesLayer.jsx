@@ -89,8 +89,31 @@ export default function WatchPartyInvitesLayer({ enabled = true }) {
       const roomId = invite.room_id ?? invite.roomId;
       if (!roomId) return;
 
-      // Per protocol: redirect to /player?wp=[roomId]
-      window.location.href = `/player?wp=${encodeURIComponent(roomId)}`;
+      // Route to the actual Player pages in this repo.
+      const contentType = invite.content_type;
+      const contentId = Number(invite.content_id);
+      const seasonNumber = Number(invite.season_number);
+      const episodeNumber = Number(invite.episode_number);
+
+      if (contentType === 'movie' && contentId) {
+        window.location.href = `/movie/${contentId}?wp=${encodeURIComponent(roomId)}`;
+        return;
+      }
+
+      if (
+        contentType === 'tv' &&
+        contentId &&
+        Number.isFinite(seasonNumber) &&
+        Number.isFinite(episodeNumber)
+      ) {
+        window.location.href = `/tv/${contentId}/season/${seasonNumber}/episode/${episodeNumber}?wp=${encodeURIComponent(
+          roomId
+        )}`;
+        return;
+      }
+
+      // Fallback: just open the home page with the same room param.
+      window.location.href = `/?wp=${encodeURIComponent(roomId)}`;
     },
     []
   );

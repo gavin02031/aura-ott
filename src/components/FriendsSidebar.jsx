@@ -2,12 +2,15 @@ import React from 'react';
 import { usePresence } from '../hooks/usePresence.js';
 import { supabase } from '../lib/supabase.js';
 import { useAcceptedFriends } from '../hooks/useAcceptedFriends.js';
+import { useLocation } from 'react-router-dom';
 
 export default function FriendsSidebar({
   open,
   onClose,
   onInvite
 }) {
+  const location = useLocation();
+
   const { onlineFriends } = usePresence();
   const { friends } = useAcceptedFriends();
 
@@ -156,13 +159,41 @@ export default function FriendsSidebar({
     if (!myUserId) return;
     if (!supabase) return;
 
+    // Parse current content from URL so the invite recipient can route correctly.
+    // Expected:
+    // - /movie/:id
+    // - /tv/:id/season/:seasonNumber/episode/:episodeNumber
+    const parts = (location?.pathname ?? '').split('/').filter(Boolean);
+    const isMovieRoute = parts[0] === 'movie';
+    const isTvRoute = parts[0] === 'tv';
+
+    let content_type = null;
+    let content_id = null;
+    let season_number = null;
+    let episode_number = null;
+
+    if (isMovieRoute && parts[1]) {
+      content_type = 'movie';
+      content_id = Number(parts[1]);
+    } else if (isTvRoute && parts.length >= 7) {
+      content_type = 'tv';
+      content_id = Number(parts[1]);
+      // parts[2] should be "season", parts[4] seasonNumber, parts[5] "episode", parts[6] episodeNumber
+      season_number = Number(parts[4]);
+      episode_number = Number(parts[6]);
+    }
+
     setLoading(true);
     try {
       await supabase.from('watch_party_invites').insert({
         sender_id: myUserId,
         receiver_id: receiverProfileId,
         room_id: roomId,
-        status: 'pending'
+        status: 'pending',
+        content_type,
+        content_id,
+        season_number,
+        episode_number
       });
     } finally {
       setLoading(false);
