@@ -241,6 +241,40 @@ function RecommendedRow() {
 
         if (lastLoved) {
           const meta = lastLoved.meta;
+          const lovedDetails =
+            meta.media_type === 'movie'
+              ? await getMovieDetails(meta.id)
+              : await getTvDetails(meta.id);
+          const lovedLanguage = lovedDetails?.original_language || null;
+          const lovedGenreSet = new Set(
+            (lovedDetails?.genres || []).map((g) => Number(g.id)).filter(Boolean)
+          );
+
+          const scoreAgainstLoved = (item) => {
+            // Keep recommendations close to seed vibe:
+            // same media type > same language > genre overlap > popularity.
+            let score = 0;
+            if ((item.media_type || (item.first_air_date ? 'tv' : 'movie')) === meta.media_type) {
+              score += 12;
+            }
+            if (lovedLanguage && item.original_language === lovedLanguage) {
+              score += 10;
+            } else if (lovedLanguage && item.original_language !== lovedLanguage) {
+              score -= 8;
+            }
+
+            const itemGenreIds = Array.isArray(item.genre_ids) ? item.genre_ids : [];
+            let overlap = 0;
+            for (const gid of itemGenreIds) {
+              if (lovedGenreSet.has(Number(gid))) overlap += 1;
+            }
+            score += overlap * 4;
+
+            // Very soft popularity tie-break.
+            score += Math.min(5, Math.floor((item.popularity || 0) / 150));
+            return score;
+          };
+
           const similar =
             meta.media_type === 'movie'
               ? await getSimilarMovies(meta.id)
@@ -248,13 +282,19 @@ function RecommendedRow() {
 
           const normalized = (similar || [])
             .filter((i) => i && i.id && !likedIdSet.has(Number(i.id)))
+            .map((item) => ({ item, score: scoreAgainstLoved(item) }))
+            .sort((a, b) => b.score - a.score)
+            .map((s) => s.item)
             .slice(0, 20)
             .map((item) => ({
               id: item.id,
               title: item.title || item.name,
               name: item.title || item.name,
               poster_path: item.poster_path,
-              media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie')
+              media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie'),
+              original_language: item.original_language,
+              genre_ids: item.genre_ids,
+              overview: item.overview
             }));
 
           if (normalized.length) {
@@ -391,7 +431,25 @@ function RecommendedRow() {
           }
         }
 
-        const candidateArr = Array.from(candidateMap.values()).slice(0, 140);
+        // Build a cleaner AI pool:
+        // - favor candidates close to what was recently loved
+        // - down-rank language outliers
+        const lovedLanguages = new Set(
+          topRated
+            .filter((r) => (r.value === 'love' || r.value === 'like') && detailCache[r.id]?.original_language)
+            .map((r) => detailCache[r.id].original_language)
+        );
+        const candidateArr = Array.from(candidateMap.values())
+          .map((c) => {
+            const lang = c.original_language;
+            const langPenalty =
+              lovedLanguages.size > 0 && lang && !lovedLanguages.has(lang) ? -6 : 0;
+            const base = Number(c.popularity || 0) / 200;
+            return { c, score: base + langPenalty };
+          })
+          .sort((a, b) => b.score - a.score)
+          .map((x) => x.c)
+          .slice(0, 140);
         if (likedForAi.length && candidateArr.length) {
           const ai = await getGroqPersonalizedPicks({
             likedItems: likedForAi,
