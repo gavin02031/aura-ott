@@ -9,12 +9,17 @@ import {
   getTvKeywords,
   getSimilarMovies,
   getSimilarTv,
+<<<<<<< HEAD
   getMovieRecommendations,
   getTvRecommendations,
   discoverByNetwork,
   discoverAdvanced
 } from '../api/tmdb.js';
 import { getGroqPersonalizedPicks } from '../api/groqRecommendations.js';
+=======
+  discoverAdvanced
+} from '../api/tmdb.js';
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 
 function RowSection({ title, items }) {
   const scrollRef = React.useRef(null);
@@ -110,6 +115,7 @@ function RecommendedRow() {
   const [similarRow, setSimilarRow] = React.useState(null);
   const [keywordRow, setKeywordRow] = React.useState(null);
   const [genreRow, setGenreRow] = React.useState(null);
+<<<<<<< HEAD
   const [aiRow, setAiRow] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -136,6 +142,22 @@ function RecommendedRow() {
         };
       })
       .filter((r) => r && r.id);
+=======
+  const [loading, setLoading] = React.useState(false);
+
+  const ratedItems = React.useMemo(() => {
+    return Object.entries(ratings).map(([id, entry]) => {
+      const value = typeof entry === 'string' ? entry : entry.value;
+      const ts = typeof entry === 'string' ? 0 : entry.ts || 0;
+      const meta = metadataById?.[id];
+      return {
+        id,
+        value,
+        ts,
+        meta
+      };
+    });
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
   }, [metadataById, ratings]);
 
   const likedMetas = React.useMemo(
@@ -158,6 +180,7 @@ function RecommendedRow() {
     async function buildRecommendations() {
       setLoading(true);
       try {
+<<<<<<< HEAD
         if (cancelled) return;
         const genreScores = {};
         const keywordScores = {};
@@ -165,6 +188,11 @@ function RecommendedRow() {
         let similarItemsLocal = [];
         let keywordItemsLocal = [];
         let genreItemsLocal = [];
+=======
+        const genreScores = {};
+        const keywordScores = {};
+        const dislikedGenres = new Set();
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 
         const recentCutoff = [...ratedItems]
           .filter((r) => r.value === 'like' || r.value === 'love')
@@ -244,6 +272,7 @@ function RecommendedRow() {
 
         if (lastLoved) {
           const meta = lastLoved.meta;
+<<<<<<< HEAD
           const lovedDetails =
             meta.media_type === 'movie'
               ? await getMovieDetails(meta.id)
@@ -368,12 +397,22 @@ function RecommendedRow() {
             .map((item) => ({ item, score: scoreAgainstLoved(item) }))
             .sort((a, b) => b.score - a.score)
             .map((s) => s.item)
+=======
+          const similar =
+            meta.media_type === 'movie'
+              ? await getSimilarMovies(meta.id)
+              : await getSimilarTv(meta.id);
+
+          const normalized = (similar || [])
+            .filter((i) => i && i.id && !likedIdSet.has(Number(i.id)))
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
             .slice(0, 20)
             .map((item) => ({
               id: item.id,
               title: item.title || item.name,
               name: item.title || item.name,
               poster_path: item.poster_path,
+<<<<<<< HEAD
               media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie'),
               original_language: item.original_language,
               origin_country: item.origin_country,
@@ -383,6 +422,12 @@ function RecommendedRow() {
 
           if (normalized.length) {
             similarItemsLocal = normalized;
+=======
+              media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie')
+            }));
+
+          if (normalized.length) {
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
             setSimilarRow({
               title: `Because you loved ${meta.title}`,
               items: normalized
@@ -414,7 +459,10 @@ function RecommendedRow() {
             }));
 
           if (normalized.length) {
+<<<<<<< HEAD
             keywordItemsLocal = normalized;
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
             setKeywordRow({
               title: 'Deep into what you love',
               items: normalized
@@ -449,13 +497,17 @@ function RecommendedRow() {
             }));
 
           if (normalized.length) {
+<<<<<<< HEAD
             genreItemsLocal = normalized;
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
             setGenreRow({
               title: 'Hidden gems in your favorite genres',
               items: normalized
             });
           }
         }
+<<<<<<< HEAD
 
         // AI two-stage personalization:
         // Stage 1 + 2 are both handled by the edge function using liked data + candidate pool.
@@ -571,6 +623,8 @@ function RecommendedRow() {
             }
           }
         }
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -585,7 +639,11 @@ function RecommendedRow() {
 
   if (!ratedItems.length) return null;
 
+<<<<<<< HEAD
   const rows = [aiRow, similarRow, keywordRow, genreRow].filter(Boolean);
+=======
+  const rows = [similarRow, keywordRow, genreRow].filter(Boolean);
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
   if (!rows.length) return null;
 
   return (

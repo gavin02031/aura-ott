@@ -120,6 +120,7 @@ export async function getSimilarTv(id) {
   return data.results || [];
 }
 
+<<<<<<< HEAD
 export async function getMovieRecommendations(id) {
   const data = await fetchFromTMDB(`/movie/${id}/recommendations`, {
     language: 'en-US'
@@ -149,6 +150,8 @@ export async function discoverByNetwork({ networkId, mediaType = 'tv', with_genr
   return data.results || [];
 }
 
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 export async function discoverAdvanced({
   mediaType,
   with_genres,

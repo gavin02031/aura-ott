@@ -2,7 +2,11 @@ import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useProfiles } from '../context/ProfileContext.jsx';
 
+<<<<<<< HEAD
 function Header({ onOpenSearch, onOpenFriends }) {
+=======
+function Header({ onOpenSearch }) {
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
   const { currentProfile } = useProfiles();
   const [scrolled, setScrolled] = React.useState(false);
 
@@ -94,7 +98,11 @@ function Header({ onOpenSearch, onOpenFriends }) {
           <button
             type="button"
             onClick={onOpenSearch}
+<<<<<<< HEAD
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/80 ring-1 ring-white/10 backdrop-blur-xl transition hover:bg-opacity-60 hover:text-white hover:text-opacity-100"
+=======
+            className="aura-icon-button"
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
             aria-label="Search"
           >
             <svg
@@ -113,6 +121,7 @@ function Header({ onOpenSearch, onOpenFriends }) {
               <circle cx="11" cy="11" r="6" />
             </svg>
           </button>
+<<<<<<< HEAD
 
           <button
             type="button"
@@ -136,6 +145,8 @@ function Header({ onOpenSearch, onOpenFriends }) {
             </svg>
           </button>
 
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
           <Link to="/profile" className="flex items-center gap-2">
             <img src={currentProfile.avatar} alt={currentProfile.name} className="w-8 h-8 rounded-full object-cover" />
             <span className="text-sm font-medium text-white">{currentProfile.name}</span>

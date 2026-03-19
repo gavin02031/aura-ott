@@ -23,7 +23,10 @@ function MediaCard({
   const { isInMyList, toggleMyList } = useMyList();
   const [isHoverNone, setIsHoverNone] = React.useState(false);
   const [revealOnTouch, setRevealOnTouch] = React.useState(false);
+<<<<<<< HEAD
   const [imageLoaded, setImageLoaded] = React.useState(false);
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 
   React.useEffect(() => {
     const mql = window.matchMedia?.('(hover: none)');
@@ -50,8 +53,11 @@ function MediaCard({
 
   const type = getMediaType(item, mediaType);
   const title = item.title || item.name || 'Untitled';
+<<<<<<< HEAD
   const year = (item.release_date || item.first_air_date || '').slice(0, 4);
   const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 
   const imagePath =
     layoutType === 'landscape'
@@ -62,8 +68,13 @@ function MediaCard({
 
   const sizeClasses =
     layoutType === 'landscape'
+<<<<<<< HEAD
       ? 'h-40 w-72 md:h-48 md:w-80'
       : 'h-52 w-36 md:h-[17rem] md:w-[11.5rem]';
+=======
+      ? 'h-36 w-64 md:h-40 md:w-72'
+      : 'h-40 w-28 md:h-52 md:w-36';
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 
   const goToDetails = () => {
     upsertMetadata(String(item.id), {
@@ -106,14 +117,18 @@ function MediaCard({
     goToDetails();
   };
 
+<<<<<<< HEAD
   const isRevealed = revealOnTouch;
 
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleKeyDown}
+<<<<<<< HEAD
       className={`aura-card cursor-pointer ${sizeClasses}`}
     >
       {/* Shine sweep on hover */}
@@ -135,12 +150,24 @@ function MediaCard({
             onLoad={() => setImageLoaded(true)}
           />
         </>
+=======
+      className={`group relative flex-shrink-0 overflow-hidden rounded-xl bg-aura-surface/30 ring-1 ring-white/10 transition-all duration-300 ease-max hover:scale-105 active:scale-105 hover:z-20 hover:shadow-cinematic-lg ${sizeClasses}`}
+    >
+      {image ? (
+        <img
+          src={image}
+          alt={title}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-aura-surface2 text-xs text-aura-muted">
           {title}
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Rating badge */}
       {rating && (
         <div className={`absolute top-2 right-2 z-10 aura-rating-badge transition-all duration-300 ${
@@ -176,6 +203,27 @@ function MediaCard({
           </div>
 
           {/* Action buttons */}
+=======
+      {/* Clean default: no text. Hover reveal only */}
+      <div
+        className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 ease-max group-hover:opacity-100 ${
+          revealOnTouch ? 'opacity-100' : ''
+        }`}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+      </div>
+
+      <div
+        className={`absolute inset-x-2 bottom-2 translate-y-2 opacity-0 transition-all duration-300 ease-max group-hover:translate-y-0 group-hover:opacity-100 ${
+          revealOnTouch ? 'translate-y-0 opacity-100' : ''
+        }`}
+      >
+        <div className="flex items-end justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{title}</p>
+          </div>
+
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -183,10 +231,17 @@ function MediaCard({
                 e.stopPropagation();
                 goToDetails();
               }}
+<<<<<<< HEAD
               className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-black shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-glow-white"
               aria-label="Play"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 ml-0.5">
+=======
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-cinematic transition hover:bg-white/90"
+              aria-label="Play"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
                 <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
               </svg>
             </button>
@@ -197,6 +252,7 @@ function MediaCard({
                 e.stopPropagation();
                 toggleMyList(item);
               }}
+<<<<<<< HEAD
               className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.12] text-white ring-1 ring-white/[0.15] backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.22] hover:scale-110"
               aria-label={isInMyList(item.id) ? 'Remove from My List' : 'Add to My List'}
             >
@@ -206,6 +262,17 @@ function MediaCard({
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="h-4 w-4">
+=======
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-xl transition hover:bg-black/70"
+              aria-label={isInMyList(item.id) ? 'Remove from My List' : 'Add to My List'}
+            >
+              {isInMyList(item.id) ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                  <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.45-12.675a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="h-5 w-5">
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               )}
@@ -214,6 +281,7 @@ function MediaCard({
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Progress bar */}
       {typeof progressPercent === 'number' && progressPercent > 0 && (
         <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
@@ -223,6 +291,13 @@ function MediaCard({
               width: `${Math.min(progressPercent, 100)}%`,
               background: 'linear-gradient(90deg, #E50914 0%, #FF6B6B 100%)'
             }}
+=======
+      {typeof progressPercent === 'number' && progressPercent > 0 && (
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-black/50">
+          <div
+            className="h-full bg-aura-red"
+            style={{ width: `${Math.min(progressPercent, 100)}%` }}
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
           />
         </div>
       )}
@@ -231,3 +306,7 @@ function MediaCard({
 }
 
 export default MediaCard;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0

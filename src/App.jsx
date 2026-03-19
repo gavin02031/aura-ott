@@ -17,9 +17,12 @@ import Profile from './pages/Profile.jsx';
 import Profiles from './pages/Profiles.jsx';
 import Startup from './components/Startup.jsx';
 import Sidebar from './components/Sidebar.jsx';
+<<<<<<< HEAD
 import FriendsSidebar from './components/FriendsSidebar.jsx';
 import WatchPartyInvitesLayer from './components/WatchPartyInvitesLayer.jsx';
 import GlobalPresenceTracker from './components/GlobalPresenceTracker.jsx';
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
 
 function App() {
   return (
@@ -37,7 +40,10 @@ function AppContent() {
   const { currentProfile } = useProfiles();
   const [showStartup, setShowStartup] = React.useState(true);
   const [showSearch, setShowSearch] = React.useState(false);
+<<<<<<< HEAD
   const [showFriends, setShowFriends] = React.useState(false);
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
   const [trailerState, setTrailerState] = React.useState({
     open: false,
     item: null
@@ -58,6 +64,7 @@ function AppContent() {
     setTrailerState((prev) => ({ ...prev, open: false }));
   };
 
+<<<<<<< HEAD
   const invitesLayer = <WatchPartyInvitesLayer enabled />;
 
   if (showStartup) {
@@ -76,11 +83,20 @@ function AppContent() {
         <Profiles />
       </>
     );
+=======
+  if (showStartup) {
+    return <Startup onFinished={handleStartupFinish} />;
+  }
+
+  if (!currentProfile) {
+    return <Profiles />;
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
   }
 
   return (
     <ProgressProvider>
       <MyListProvider>
+<<<<<<< HEAD
         <GlobalPresenceTracker />
         {invitesLayer}
         <div className="min-h-screen bg-aura-bg text-white">
@@ -93,6 +109,12 @@ function AppContent() {
               onOpenSearch={() => setShowSearch(true)}
               onOpenFriends={() => setShowFriends(true)}
             />
+=======
+        <div className="min-h-screen bg-aura-bg text-white">
+          <Sidebar onOpenSearch={() => setShowSearch(true)} />
+          <div className="md:hidden">
+            <Header onOpenSearch={() => setShowSearch(true)} />
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
           </div>
           <main className="pt-16 md:pt-0 md:pl-20">
             <Routes>
@@ -116,6 +138,7 @@ function AppContent() {
               onClose={() => setShowSearch(false)}
             />
           )}
+<<<<<<< HEAD
 
           {showFriends && (
             <FriendsSidebar
@@ -123,6 +146,8 @@ function AppContent() {
               onClose={() => setShowFriends(false)}
             />
           )}
+=======
+>>>>>>> 5ec29865a04809525563001a85cf81720ec3dff0
         </div>
       </MyListProvider>
     </ProgressProvider>
