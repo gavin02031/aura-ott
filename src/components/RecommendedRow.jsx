@@ -400,6 +400,11 @@ function RecommendedRow() {
             avoidStrength: 'strong'
           });
 
+          if (!ai && !cancelled) {
+            // eslint-disable-next-line no-console
+            console.warn('AI personalization unavailable; using heuristic rows.');
+          }
+
           if (!cancelled && ai?.picks?.length) {
             const byId = new Map(candidateArr.map((c) => [Number(c.id), c]));
             const ranked = ai.picks
