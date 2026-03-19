@@ -187,6 +187,7 @@ function Player({ type }) {
     details?.credits?.cast?.slice(0, 5).map((c) => c.name).join(', ') || '';
 
   const synopsis = details?.overview || '';
+  const ratingMediaKey = `${isMovie ? 'movie' : 'tv'}:${String(id)}`;
 
   const buildPlayerSrc = React.useCallback(
     (autoPlay, timestamp) => {
@@ -523,10 +524,10 @@ function Player({ type }) {
               <button
                 type="button"
                 onClick={() =>
-                  setRating(String(id), getRating(String(id)) === 'dislike' ? null : 'dislike')
+                  setRating(ratingMediaKey, getRating(ratingMediaKey) === 'dislike' ? null : 'dislike')
                 }
                 className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
-                  getRating(String(id)) === 'dislike'
+                  getRating(ratingMediaKey) === 'dislike'
                     ? 'bg-red-600 text-white'
                     : 'text-gray-300 hover:bg-white/10'
                 }`}
@@ -537,10 +538,10 @@ function Player({ type }) {
               <button
                 type="button"
                 onClick={() =>
-                  setRating(String(id), getRating(String(id)) === 'like' ? null : 'like')
+                  setRating(ratingMediaKey, getRating(ratingMediaKey) === 'like' ? null : 'like')
                 }
                 className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
-                  getRating(String(id)) === 'like'
+                  getRating(ratingMediaKey) === 'like'
                     ? 'bg-green-500 text-white'
                     : 'text-gray-300 hover:bg-white/10'
                 }`}
@@ -551,10 +552,10 @@ function Player({ type }) {
               <button
                 type="button"
                 onClick={() =>
-                  setRating(String(id), getRating(String(id)) === 'love' ? null : 'love')
+                  setRating(ratingMediaKey, getRating(ratingMediaKey) === 'love' ? null : 'love')
                 }
                 className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
-                  getRating(String(id)) === 'love'
+                  getRating(ratingMediaKey) === 'love'
                     ? 'bg-aura-red text-white'
                     : 'text-gray-300 hover:bg-white/10'
                 }`}
