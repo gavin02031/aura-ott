@@ -282,6 +282,23 @@ function RecommendedRow() {
 
           const normalized = (similar || [])
             .filter((i) => i && i.id && !likedIdSet.has(Number(i.id)))
+            // Hard lock: if seed has known language, force same language.
+            .filter((item) => {
+              if (!lovedLanguage) return true;
+              return item.original_language === lovedLanguage;
+            })
+            // Hard lock: must overlap at least one seed genre (when seed has genres).
+            .filter((item) => {
+              if (!lovedGenreSet.size) return true;
+              const gids = Array.isArray(item.genre_ids) ? item.genre_ids : [];
+              return gids.some((gid) => lovedGenreSet.has(Number(gid)));
+            })
+            // If seed is TV, stay TV-focused.
+            .filter((item) =>
+              meta.media_type === 'tv'
+                ? (item.media_type || (item.first_air_date ? 'tv' : 'movie')) === 'tv'
+                : true
+            )
             .map((item) => ({ item, score: scoreAgainstLoved(item) }))
             .sort((a, b) => b.score - a.score)
             .map((s) => s.item)
@@ -439,7 +456,16 @@ function RecommendedRow() {
             .filter((r) => (r.value === 'love' || r.value === 'like') && detailCache[r.id]?.original_language)
             .map((r) => detailCache[r.id].original_language)
         );
+        const dominantLanguage =
+          lovedLanguages.size === 1 ? Array.from(lovedLanguages)[0] : null;
+
         const candidateArr = Array.from(candidateMap.values())
+          // Hard candidate filtering when user taste is clearly one language.
+          .filter((c) => {
+            if (!dominantLanguage) return true;
+            if (!c.original_language) return true;
+            return c.original_language === dominantLanguage;
+          })
           .map((c) => {
             const lang = c.original_language;
             const langPenalty =
