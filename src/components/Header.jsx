@@ -94,7 +94,7 @@ function Header({ onOpenSearch, onOpenFriends }) {
           <button
             type="button"
             onClick={onOpenSearch}
-            className="aura-icon-button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/80 ring-1 ring-white/10 backdrop-blur-xl transition hover:bg-opacity-60 hover:text-white hover:text-opacity-100"
             aria-label="Search"
           >
             <svg
@@ -117,7 +117,7 @@ function Header({ onOpenSearch, onOpenFriends }) {
           <button
             type="button"
             onClick={onOpenFriends}
-            className="aura-icon-button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/80 ring-1 ring-white/10 backdrop-blur-xl transition hover:bg-opacity-60 hover:text-white hover:text-opacity-100"
             aria-label="Friends"
             title="Friends"
           >
