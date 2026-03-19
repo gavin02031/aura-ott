@@ -1,57 +1,64 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 
-function joinRouteForPayload(payload, navigate) {
-  if (!payload) return;
-
-  const content = payload.content ?? {};
-  const type = content.type;
-
-  if (type === 'movie') {
-    navigate(`/movie/${content.id}?wp=${encodeURIComponent(payload.roomId)}`);
-    return;
-  }
-
-  if (type === 'tv') {
-    navigate(
-      `/tv/${content.id}/season/${content.seasonNumber}/episode/${content.episodeNumber}?wp=${encodeURIComponent(
-        payload.roomId
-      )}`
-    );
-  }
-}
-
 export default function WatchPartyInvitesLayer({ enabled = true }) {
-  const [open, setOpen] = React.useState(false);
-  const [invitePayload, setInvitePayload] = React.useState(null);
-
   const navigate = useNavigate();
-  const location = useLocation();
+
+  const [activeInvites, setActiveInvites] = React.useState([]);
+  const [bellOpen, setBellOpen] = React.useState(false);
+
+  const loadPendingInvites = React.useCallback(async (userId) => {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from('watch_party_invites')
+      .select('*')
+      .eq('receiver_id', userId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) return [];
+    return data ?? [];
+  }, []);
 
   React.useEffect(() => {
     if (!enabled) return;
+    if (!supabase) return;
 
     let alive = true;
     let channel = null;
-    let myId = null;
 
     const setup = async () => {
-      if (!supabase) return;
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;
       if (!user) return;
 
-      myId = user.id;
-      channel = supabase.channel(`invites-${myId}`);
+      const pending = await loadPendingInvites(user.id);
+      if (!alive) return;
+      setActiveInvites(pending);
 
-      channel.on('broadcast', { event: 'watch-party-invite' }, ({ payload }) => {
-        if (!alive) return;
-        if (!payload?.roomId) return;
-
-        setInvitePayload(payload);
-        setOpen(true);
-      });
+      // Postgres realtime: new invites inserted for this receiver.
+      channel = supabase
+        .channel(`watch-party-invites-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'watch_party_invites',
+            filter: `receiver_id=eq.${user.id}`
+          },
+          (payload) => {
+            const row = payload?.new;
+            if (!row) return;
+            setActiveInvites((prev) => {
+              const exists = prev.some((p) => String(p.id) === String(row.id));
+              if (exists) return prev;
+              return [row, ...prev];
+            });
+          }
+        );
 
       await channel.subscribe();
     };
@@ -63,51 +70,157 @@ export default function WatchPartyInvitesLayer({ enabled = true }) {
       if (channel) supabase.removeChannel(channel);
       channel = null;
     };
-  }, [enabled]);
+  }, [enabled, loadPendingInvites]);
 
-  if (!enabled || !open || !invitePayload) return null;
+  const acceptInvite = React.useCallback(
+    async (invite) => {
+      if (!supabase) return;
+      if (!invite?.id) return;
 
-  const inviter = invitePayload.inviter ?? {};
+      await supabase
+        .from('watch_party_invites')
+        .update({ status: 'accepted' })
+        .eq('id', invite.id);
+
+      setActiveInvites((prev) =>
+        prev.filter((p) => String(p.id) !== String(invite.id))
+      );
+
+      const roomId = invite.room_id ?? invite.roomId;
+      if (!roomId) return;
+
+      // Per protocol: redirect to /player?wp=[roomId]
+      window.location.href = `/player?wp=${encodeURIComponent(roomId)}`;
+    },
+    []
+  );
+
+  const declineInvite = React.useCallback(async (invite) => {
+    if (!supabase) return;
+    if (!invite?.id) return;
+
+    await supabase
+      .from('watch_party_invites')
+      .update({ status: 'declined' })
+      .eq('id', invite.id);
+
+    setActiveInvites((prev) =>
+      prev.filter((p) => String(p.id) !== String(invite.id))
+    );
+  }, []);
+
+  if (!enabled || activeInvites.length === 0) {
+    // Still show bell placeholder? Per protocol, bell only when invites exist.
+    if (!enabled) return null;
+  }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={() => setOpen(false)}
-      />
-
-      <div className="relative w-full max-w-md rounded-2xl bg-[#141A24]/90 backdrop-blur-2xl border border-white/10 p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]">
-        <h2 className="text-sm md:text-base font-bold tracking-wide">
-          {inviter.username ? `${inviter.username} invited you` : 'Watch party invite'}
-        </h2>
-        <p className="mt-3 text-sm text-white/60">
-          Join room <span className="text-white/80 font-semibold">{invitePayload.roomId}</span>?
-        </p>
-
-        <div className="mt-6 flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              joinRouteForPayload(invitePayload, navigate);
-              // keep current route state from interfering with navigation
-              // eslint-disable-next-line no-console
-              console.log('Joining watch party…', location.pathname);
-            }}
-            className="flex-1 rounded-xl bg-[#E50914] hover:bg-[#F6121D] transition px-4 py-3 font-semibold text-white"
+    <>
+      {enabled && activeInvites.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setBellOpen((v) => !v)}
+          className="fixed right-6 top-24 z-[85] inline-flex items-center justify-center rounded-xl bg-[#141A24]/80 border border-white/10 w-11 h-11 backdrop-blur-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]"
+          aria-label="Watch party invites"
+          title="Watch party invites"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#E50914"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+            aria-hidden="true"
           >
-            Join
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="flex-1 rounded-xl bg-white/5 hover:bg-white/10 transition px-4 py-3 font-semibold text-white/70 border border-white/10"
-          >
-            Not now
-          </button>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6 6 0 1 0-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a3 3 0 0 0 6 0" />
+          </svg>
+        </button>
+      )}
+
+      {enabled && bellOpen && activeInvites.length > 0 && (
+        <div className="fixed right-6 top-[180px] z-[86] w-80 rounded-2xl bg-[#141A24]/95 backdrop-blur-2xl border border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)] p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold tracking-wide text-white/70">
+              Pending Invites
+            </p>
+            <button
+              type="button"
+              onClick={() => setBellOpen(false)}
+              className="text-xs text-white/60 hover:text-white transition"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {activeInvites.map((inv) => (
+              <div key={inv.id} className="rounded-xl bg-white/5 border border-white/10 p-3">
+                <p className="text-xs font-semibold text-white/90">
+                  Room: {inv.room_id ?? 'Unknown'}
+                </p>
+                <p className="mt-1 text-[0.65rem] text-white/40 break-all">
+                  From: {inv.sender_id ?? 'Unknown'}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBellOpen(false);
+                      acceptInvite(inv);
+                    }}
+                    className="flex-1 rounded-xl bg-[#E50914] hover:bg-[#F6121D] transition px-3 py-2 font-semibold text-white text-xs"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => declineInvite(inv)}
+                    className="flex-1 rounded-xl bg-white/5 hover:bg-white/10 transition px-3 py-2 font-semibold text-white/70 border border-white/10 text-xs"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Toasts */}
+      {enabled && activeInvites.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-[87] space-y-3 w-full max-w-sm pointer-events-none">
+          {activeInvites.slice(0, 2).map((inv) => (
+            <div
+              key={inv.id}
+              className="pointer-events-auto rounded-2xl bg-[#141A24]/95 backdrop-blur-2xl border border-white/10 p-4 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]"
+            >
+              <p className="text-xs text-white/60">Watch Party Invite</p>
+              <p className="text-sm font-bold tracking-wide text-white break-all">
+                Room: {inv.room_id ?? 'Unknown'}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => acceptInvite(inv)}
+                  className="flex-1 rounded-xl bg-[#E50914] hover:bg-[#F6121D] transition px-3 py-2 font-semibold text-white text-xs"
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => declineInvite(inv)}
+                  className="flex-1 rounded-xl bg-white/5 hover:bg-white/10 transition px-3 py-2 font-semibold text-white/70 border border-white/10 text-xs"
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 

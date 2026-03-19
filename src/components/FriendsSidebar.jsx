@@ -22,9 +22,23 @@ export default function FriendsSidebar({
   const [myUserId, setMyUserId] = React.useState(null);
 
   const [loading, setLoading] = React.useState(false);
+  const [roomId, setRoomId] = React.useState(null);
 
   React.useEffect(() => {
     let alive = true;
+
+    const syncRoomId = () => {
+      try {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location.search);
+        const wp = params.get('wp');
+        if (alive) setRoomId(wp || null);
+      } catch {
+        // ignore
+      }
+    };
+
+    syncRoomId();
 
     const loadMyIdAndPending = async () => {
       const { data: authData } = await supabase.auth.getUser();
@@ -132,6 +146,24 @@ export default function FriendsSidebar({
       if (error) throw error;
 
       setPending((prev) => prev.filter((p) => p.id !== fromUserId));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendInvite = async (receiverProfileId) => {
+    if (!roomId) return;
+    if (!myUserId) return;
+    if (!supabase) return;
+
+    setLoading(true);
+    try {
+      await supabase.from('watch_party_invites').insert({
+        sender_id: myUserId,
+        receiver_id: receiverProfileId,
+        room_id: roomId,
+        status: 'pending'
+      });
     } finally {
       setLoading(false);
     }
@@ -307,15 +339,30 @@ export default function FriendsSidebar({
 
                     <button
                       type="button"
-                      onClick={() => onInvite?.(f.id)}
-                      disabled={!onInvite}
+                      onClick={() => sendInvite(f.id)}
+                      disabled={!roomId || loading}
+                      aria-label="Invite to watch party"
                       className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                        onInvite
-                          ? 'border-[#E50914]/60 text-white/90 hover:border-[#E50914] hover:bg-[#E50914]/10'
-                          : 'border-white/10 text-white/35 cursor-not-allowed'
+                        !roomId
+                          ? 'border-white/10 text-white/35 cursor-not-allowed'
+                          : 'border-[#E50914]/60 text-white/90 hover:border-[#E50914] hover:bg-[#E50914]/10'
                       }`}
                     >
-                      Invite
+                      <span className="inline-flex items-center gap-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h8" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8" />
+                        </svg>
+                        Invite
+                      </span>
                     </button>
                   </div>
                 );

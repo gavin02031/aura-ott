@@ -15,6 +15,10 @@ export function useWatchPartyRoom(roomId, { onRemoteVideoSync } = {}) {
   const [messages, setMessages] = React.useState([]);
   const [connected, setConnected] = React.useState(false);
 
+  // Prevent infinite loops:
+  // Remote video-sync -> sets this ref -> Player's local postMessage listener ignores one event.
+  const isProgrammaticEvent = React.useRef(false);
+
   const channelRef = React.useRef(null);
   const meRef = React.useRef(null);
   const seenMessageIdsRef = React.useRef(new Set());
@@ -125,6 +129,9 @@ export function useWatchPartyRoom(roomId, { onRemoteVideoSync } = {}) {
         if (payload.user_id === me.id) return;
         if (typeof payload.timestamp !== 'number' && typeof payload.timestamp !== 'string') return;
 
+        // Mark next local VidKing PLAYER_EVENT as programmatic so Player doesn't broadcast back.
+        isProgrammaticEvent.current = true;
+
         onRemoteVideoSync?.({
           state: payload.state,
           timestamp: Number(payload.timestamp),
@@ -182,7 +189,8 @@ export function useWatchPartyRoom(roomId, { onRemoteVideoSync } = {}) {
     members,
     messages,
     sendVideoSync,
-    sendChatMessage
+    sendChatMessage,
+    isProgrammaticEvent
   };
 }
 

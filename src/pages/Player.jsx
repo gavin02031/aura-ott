@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getMovieDetails, getTvDetails, getTvSeason, getImageUrl } from '../api/tmdb.js';
 import { useProgress } from '../context/ProgressContext.jsx';
 import { useMyList } from '../context/MyListContext.jsx';
@@ -13,7 +13,6 @@ import WatchPartyChatPanel from '../components/WatchPartyChatPanel.jsx';
 function Player({ type }) {
   const { id, seasonNumber, episodeNumber } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { upsertMetadata } = useProgress();
   const { isInMyList, toggleMyList } = useMyList();
   const { getRating, setRating } = useRatings();
@@ -32,18 +31,32 @@ function Player({ type }) {
   // Watch party:
   // - If `wp` exists in the URL, join that room
   // - Otherwise, starting a party will create a room id and update the URL
-  const wpFromUrl = searchParams.get('wp');
-  const [roomId, setRoomId] = React.useState(wpFromUrl || null);
+  const [roomId, setRoomId] = React.useState(null);
+  const [isRoomReady, setIsRoomReady] = React.useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const wp = params.get('wp');
+      return !wp;
+    } catch {
+      return true;
+    }
+  });
 
   React.useEffect(() => {
-    setRoomId(wpFromUrl || null);
-  }, [wpFromUrl]);
+    // Framework-agnostic URL parsing (required by protocol).
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const wp = params.get('wp');
+      setRoomId(wp || null);
+    } catch {
+      setRoomId(null);
+    }
+  }, []);
 
   const currentTimeRef = React.useRef(0);
   const playbackStateRef = React.useRef('paused'); // 'playing' | 'paused'
   const lastLocalBroadcastAtRef = React.useRef(0);
   const lastRemoteAppliedAtRef = React.useRef(0);
-  const isApplyingRemoteRef = React.useRef(false);
 
   const openTrailer = () => {
     if (details) {
@@ -206,15 +219,10 @@ function Player({ type }) {
       if (desiredState === playbackStateRef.current && diff < 0.35) return;
 
       lastRemoteAppliedAtRef.current = now;
-      isApplyingRemoteRef.current = true;
 
       setShowPlayer(true);
       setPlayerSrc(buildPlayerSrc(desiredState === 'playing', desiredTime));
       playbackStateRef.current = desiredState;
-
-      window.setTimeout(() => {
-        isApplyingRemoteRef.current = false;
-      }, 1200);
     },
     [buildPlayerSrc]
   );
@@ -224,17 +232,29 @@ function Player({ type }) {
     members: wpMembers,
     messages: wpMessages,
     sendVideoSync,
-    sendChatMessage
+    sendChatMessage,
+    isProgrammaticEvent
   } = useWatchPartyRoom(roomId, { onRemoteVideoSync: handleRemoteVideoSync });
+
+  React.useEffect(() => {
+    if (!roomId) {
+      setIsRoomReady(true);
+      return;
+    }
+    setIsRoomReady(Boolean(wpConnected));
+  }, [roomId, wpConnected]);
 
   const closeWatchParty = React.useCallback(() => {
     setRoomId(null);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.delete('wp');
-      return next;
-    });
-  }, [setSearchParams]);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('wp');
+      const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', next);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const startWatchParty = React.useCallback(() => {
     const newRoomId =
@@ -242,12 +262,15 @@ function Player({ type }) {
       `room-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     setRoomId(newRoomId);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('wp', newRoomId);
-      return next;
-    });
-  }, [setSearchParams]);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set('wp', newRoomId);
+      const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+      window.history.replaceState({}, '', next);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const inviteToFriend = React.useCallback(
     async (targetUserId) => {
@@ -258,60 +281,19 @@ function Player({ type }) {
         const user = authData?.user;
         if (!user) return;
 
-        let inviter = { username: user.email ?? user.id, avatar_url: null };
-        try {
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('username,avatar_url')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (prof) {
-            inviter = {
-              username: prof.username ?? inviter.username,
-              avatar_url: prof.avatar_url ?? null
-            };
-          }
-        } catch {
-          // ignore profile fetch errors
-        }
-
-        const content = isMovie
-          ? { type: 'movie', id: Number(id) }
-          : {
-              type: 'tv',
-              id: Number(id),
-              seasonNumber: Number(selectedSeason) || Number(seasonNumber) || 1,
-              episodeNumber: Number(episodeNumber) || 1
-            };
-
-        const channel = supabase.channel(`invites-${targetUserId}`);
-
-        // Wait until the realtime channel is subscribed before sending.
-        await new Promise((resolve) => {
-          channel.subscribe((status) => {
-            if (status === 'SUBSCRIBED') resolve(true);
-          });
+        // Absolute Reliability Protocol: invites are written to Postgres.
+        await supabase.from('watch_party_invites').insert({
+          sender_id: user.id,
+          receiver_id: targetUserId,
+          room_id: roomId,
+          status: 'pending'
         });
-
-        channel.send({
-          type: 'broadcast',
-          event: 'watch-party-invite',
-          payload: { roomId, inviter, content }
-        });
-
-        // Cleanup to avoid accumulating idle channels.
-        supabase.removeChannel(channel);
       } catch {
         // ignore invite errors
       }
     },
     [
       roomId,
-      id,
-      episodeNumber,
-      isMovie,
-      selectedSeason,
-      seasonNumber,
       supabase
     ]
   );
@@ -349,8 +331,12 @@ function Player({ type }) {
 
       const eventName = typeof data.event === 'string' ? data.event : null;
 
-      // While applying a remote sync, do not broadcast back (prevents loops).
-      if (isApplyingRemoteRef.current) return;
+      // Absolute Reliability Protocol:
+      // Ignore one local PLAYER_EVENT that was caused by a remote/programmatic sync.
+      if (isProgrammaticEvent.current) {
+        isProgrammaticEvent.current = false;
+        return;
+      }
 
       if (eventName === 'play') {
         playbackStateRef.current = 'playing';
@@ -396,7 +382,7 @@ function Player({ type }) {
         <div className="mx-auto max-w-7xl px-4 pt-16 md:px-10">
           <div className={roomId ? 'flex flex-col md:flex-row gap-6' : ''}>
             <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-cinematic-lg ring-1 ring-white ring-opacity-10 md:flex-1 min-w-0">
-              {showPlayer ? (
+              {showPlayer && isRoomReady ? (
                 <iframe
                   src={playerSrc}
                   title={title}
@@ -418,7 +404,7 @@ function Player({ type }) {
               )}
             </div>
 
-            {roomId && (
+            {roomId && isRoomReady && (
               <div className="w-full md:w-96 md:shrink-0">
                 <WatchPartyChatPanel
                   roomId={roomId}
@@ -469,7 +455,7 @@ function Player({ type }) {
                 const ts = currentTimeRef.current ?? 0;
                 setPlayerSrc(buildPlayerSrc(true, ts));
                 playbackStateRef.current = 'playing';
-                if (roomId) sendVideoSync('playing', ts);
+                if (roomId && isRoomReady) sendVideoSync('playing', ts);
               }}
               className="inline-flex items-center gap-2 rounded bg-white px-5 py-2 text-sm font-semibold text-black shadow-md shadow-black/40 transition hover:bg-gray-200 md:px-6 md:py-2.5 md:text-base"
             >
@@ -672,6 +658,25 @@ function Player({ type }) {
           </div>
         )}
       </div>
+
+      {roomId && !isRoomReady && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0A0E17]">
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative w-full max-w-md rounded-2xl bg-[#141A24]/90 backdrop-blur-2xl border border-white/10 p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full border-4 border-white/10 border-t-[#E50914] animate-spin" />
+              <div>
+                <p className="text-sm font-bold tracking-wide text-white">
+                  Securing Secure Connection to Room...
+                </p>
+                <p className="mt-1 text-xs text-white/60">
+                  Please wait while your session connects.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showTrailer && (
         <TrailerModal item={details} onClose={closeTrailer} />
