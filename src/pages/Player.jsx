@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase.js';
 import TrailerModal from '../components/TrailerModal.jsx';
 import Cast from '../components/Cast.jsx';
 import { useWatchPartyRoom } from '../hooks/useWatchPartyRoom.js';
-import WatchPartyRoomOverlay from '../components/WatchPartyRoomOverlay.jsx';
+import WatchPartyChatPanel from '../components/WatchPartyChatPanel.jsx';
 
 function Player({ type }) {
   const { id, seasonNumber, episodeNumber } = useParams();
@@ -284,19 +284,17 @@ function Player({ type }) {
             };
 
         const channel = supabase.channel(`invites-${targetUserId}`);
+        // Ensure the channel is fully subscribed before broadcasting.
+        await channel.subscribe();
 
-        await channel.subscribe((status) => {
-          if (status !== 'SUBSCRIBED') return;
-          channel.send({
-            type: 'broadcast',
-            event: 'watch-party-invite',
-            payload: { roomId, inviter, content }
-          });
+        channel.send({
+          type: 'broadcast',
+          event: 'watch-party-invite',
+          payload: { roomId, inviter, content }
         });
 
-        window.setTimeout(() => {
-          supabase.removeChannel(channel);
-        }, 600);
+        // Cleanup to avoid accumulating idle channels.
+        supabase.removeChannel(channel);
       } catch {
         // ignore invite errors
       }
@@ -390,25 +388,43 @@ function Player({ type }) {
     <div className="pb-12">
       <div className="bg-aura-bg">
         <div className="mx-auto max-w-7xl px-4 pt-16 md:px-10">
-          <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-cinematic-lg ring-1 ring-white ring-opacity-10">
-            {showPlayer ? (
-              <iframe
-                src={playerSrc}
-                title={title}
-                allowFullScreen
-                className="h-full w-full border-none"
-              />
-            ) : (
-              <div
-                className="h-full w-full bg-cover bg-center"
-                style={{
-                  backgroundImage: `url(${getImageUrl(
-                    details?.backdrop_path,
-                    'w1280'
-                  )})`
-                }}
-              >
-                {/* Optional: Add a play icon overlay */}
+          <div className={roomId ? 'flex flex-col md:flex-row gap-6' : ''}>
+            <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-cinematic-lg ring-1 ring-white ring-opacity-10 md:flex-1 min-w-0">
+              {showPlayer ? (
+                <iframe
+                  src={playerSrc}
+                  title={title}
+                  allowFullScreen
+                  className="h-full w-full border-none"
+                />
+              ) : (
+                <div
+                  className="h-full w-full bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${getImageUrl(
+                      details?.backdrop_path,
+                      'w1280'
+                    )})`
+                  }}
+                >
+                  {/* Poster backdrop */}
+                </div>
+              )}
+            </div>
+
+            {roomId && (
+              <div className="w-full md:w-96 md:shrink-0">
+                <WatchPartyChatPanel
+                  roomId={roomId}
+                  members={wpMembers}
+                  messages={wpMessages}
+                  connected={wpConnected}
+                  onClose={closeWatchParty}
+                  onSendChatMessage={sendChatMessage}
+                  onSendVideoSync={sendVideoSync}
+                  onInviteToFriend={inviteToFriend}
+                  contentLabel={title}
+                />
               </div>
             )}
           </div>
@@ -655,19 +671,7 @@ function Player({ type }) {
         <TrailerModal item={details} onClose={closeTrailer} />
       )}
 
-      {roomId && (
-        <WatchPartyRoomOverlay
-          roomId={roomId}
-          members={wpMembers}
-          messages={wpMessages}
-          connected={wpConnected}
-          onClose={closeWatchParty}
-          onSendChatMessage={sendChatMessage}
-          onSendVideoSync={sendVideoSync}
-          onInviteToFriend={inviteToFriend}
-          contentLabel={`${title}`}
-        />
-      )}
+      {/* Watch party UI is rendered inline next to the player (no background blur overlay). */}
 
       {loading && !details && (
         <p className="mt-4 text-center text-sm text-gray-300">Loading…</p>
