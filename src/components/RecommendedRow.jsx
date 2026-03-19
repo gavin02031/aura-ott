@@ -109,17 +109,28 @@ function RecommendedRow() {
   const [loading, setLoading] = React.useState(false);
 
   const ratedItems = React.useMemo(() => {
-    return Object.entries(ratings).map(([id, entry]) => {
-      const value = typeof entry === 'string' ? entry : entry.value;
-      const ts = typeof entry === 'string' ? 0 : entry.ts || 0;
-      const meta = metadataById?.[id];
-      return {
-        id,
-        value,
-        ts,
-        meta
-      };
-    });
+    return Object.entries(ratings)
+      .map(([mediaKey, entry]) => {
+        // RatingContext stores:
+        // - movie:<tmdbId>
+        // - tv:<tmdbId>
+        // Older localStorage could store raw ids; handle both.
+        const parts = String(mediaKey).split(':');
+        const isNamespaced = parts.length === 2 && (parts[0] === 'movie' || parts[0] === 'tv');
+        const tmdbId = isNamespaced ? parts[1] : mediaKey;
+
+        const value = typeof entry === 'string' ? entry : entry.value;
+        const ts = typeof entry === 'string' ? 0 : entry.ts || 0;
+        const meta = metadataById?.[tmdbId];
+
+        return {
+          id: tmdbId,
+          value,
+          ts,
+          meta
+        };
+      })
+      .filter((r) => r && r.id);
   }, [metadataById, ratings]);
 
   const likedMetas = React.useMemo(
