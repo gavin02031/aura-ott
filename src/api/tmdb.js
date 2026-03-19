@@ -120,6 +120,35 @@ export async function getSimilarTv(id) {
   return data.results || [];
 }
 
+export async function getMovieRecommendations(id) {
+  const data = await fetchFromTMDB(`/movie/${id}/recommendations`, {
+    language: 'en-US'
+  });
+  return data.results || [];
+}
+
+export async function getTvRecommendations(id) {
+  const data = await fetchFromTMDB(`/tv/${id}/recommendations`, {
+    language: 'en-US'
+  });
+  return data.results || [];
+}
+
+export async function discoverByNetwork({ networkId, mediaType = 'tv', with_genres, without_genres, with_original_language }) {
+  const path = mediaType === 'tv' ? '/discover/tv' : '/discover/movie';
+  const params = {
+    include_adult: 'false',
+    sort_by: 'popularity.desc',
+    language: 'en-US'
+  };
+  if (networkId) params.with_networks = String(networkId);
+  if (with_genres) params.with_genres = with_genres;
+  if (without_genres) params.without_genres = without_genres;
+  if (with_original_language) params.with_original_language = with_original_language;
+  const data = await fetchFromTMDB(path, params);
+  return data.results || [];
+}
+
 export async function discoverAdvanced({
   mediaType,
   with_genres,

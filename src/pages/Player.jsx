@@ -424,27 +424,27 @@ function Player({ type }) {
         </div>
       </div>
 
-      <div className="mx-auto mt-4 flex max-w-7xl flex-col gap-6 px-4 md:mt-6 md:flex-row md:px-10">
-        <div className="flex-1 space-y-3 md:space-y-4">
-          <h1 className="text-2xl font-extrabold tracking-[-0.02em] md:text-3xl">{title}</h1>
+      <div className="mx-auto mt-4 flex max-w-7xl flex-col gap-6 px-4 md:mt-8 md:flex-row md:px-10">
+        <div className="flex-1 space-y-4 md:space-y-5">
+          <h1 className="text-3xl font-black tracking-[-0.03em] md:text-4xl aura-gradient-text">{title}</h1>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-white text-opacity-80">
-            <span className="font-semibold text-green-400">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
+            <span className="font-bold text-emerald-400">
               {matchPercent}% Match
             </span>
             {year && <span>{year}</span>}
-            <span className="rounded border border-white border-opacity-20 px-1.5 py-0.5 text-xs font-semibold text-white text-opacity-90">
+            <span className="rounded-md border border-white/15 px-2 py-0.5 text-[0.65rem] font-bold text-white/60 tracking-wider">
               {maturityRating}
             </span>
             {durationLabel && <span>{durationLabel}</span>}
             {genres && (
-              <span className="hidden text-aura-muted md:inline-block">
+              <span className="hidden text-white/40 md:inline-block">
                 {genres}
               </span>
             )}
           </div>
 
-          <p className="max-w-2xl text-sm text-white text-opacity-75 md:text-base">
+          <p className="max-w-2xl text-sm text-white/60 leading-relaxed md:text-base">
             {synopsis}
           </p>
 
@@ -458,9 +458,9 @@ function Player({ type }) {
                 playbackStateRef.current = 'playing';
                 if (roomId && isRoomReady) sendVideoSync('playing', ts);
               }}
-              className="inline-flex items-center gap-2 rounded bg-white px-5 py-2 text-sm font-semibold text-black shadow-md shadow-black/40 transition hover:bg-gray-200 md:px-6 md:py-2.5 md:text-base"
+              className="aura-btn-primary md:text-base"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
               </svg>
               Play
@@ -472,14 +472,14 @@ function Player({ type }) {
                 startWatchParty();
               }}
               disabled={!!roomId}
-              className={`inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-semibold backdrop-blur transition md:px-5 md:py-2.5 ${
+              className={`inline-flex items-center gap-2.5 rounded-xl px-5 py-3 text-sm font-semibold backdrop-blur-xl transition-all duration-300 md:px-6 md:py-3.5 ${
                 roomId
-                  ? 'text-white/60 bg-white/5 cursor-not-allowed'
-                  : 'text-white bg-white/5 border border-[#E50914]/60 hover:bg-white/10'
+                  ? 'text-white/40 bg-white/[0.04] cursor-not-allowed'
+                  : 'text-white bg-white/[0.06] ring-1 ring-aura-red/40 hover:bg-white/[0.1] hover:ring-aura-red/60'
               }`}
             >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-[#E50914] text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-aura-red text-white shadow-glow-red">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.1 10.1 12 6 9.9 10.1 6 12l3.9 1.9L12 18l2.1-4.1L18 12z" />
                 </svg>
               </span>
@@ -488,9 +488,9 @@ function Player({ type }) {
             <button
               type="button"
               onClick={openTrailer}
-              className="inline-flex items-center gap-2 rounded bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/30 md:px-5 md:py-2.5"
+              className="aura-btn-secondary md:text-base"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
               </svg>
               Watch Trailer
@@ -506,30 +506,31 @@ function Player({ type }) {
                   media_type: isMovie ? 'movie' : 'tv'
                 })
               }
-              className="inline-flex items-center gap-2 rounded bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 md:px-5 md:py-2.5"
+              className="aura-btn-secondary md:text-base"
             >
               {isInMyList(details?.id) ? (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                   <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.45-12.675a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
                 </svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               )}
               My List
             </button>
 
-            <div className="ml-2 flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 text-xs font-medium text-gray-100 ring-1 ring-white/10">
+            {/* Rating buttons */}
+            <div className="ml-1 flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1.5 ring-1 ring-white/[0.08] backdrop-blur-xl">
               <button
                 type="button"
                 onClick={() =>
                   setRating(ratingMediaKey, getRating(ratingMediaKey) === 'dislike' ? null : 'dislike')
                 }
-                className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 ${
                   getRating(ratingMediaKey) === 'dislike'
-                    ? 'bg-red-600 text-white'
-                    : 'text-gray-300 hover:bg-white/10'
+                    ? 'bg-red-500/80 text-white scale-110 shadow-lg'
+                    : 'text-white/50 hover:bg-white/[0.08] hover:text-white/80 hover:scale-105'
                 }`}
                 aria-label="I don't like this"
               >
@@ -540,10 +541,10 @@ function Player({ type }) {
                 onClick={() =>
                   setRating(ratingMediaKey, getRating(ratingMediaKey) === 'like' ? null : 'like')
                 }
-                className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 ${
                   getRating(ratingMediaKey) === 'like'
-                    ? 'bg-green-500 text-white'
-                    : 'text-gray-300 hover:bg-white/10'
+                    ? 'bg-emerald-500/80 text-white scale-110 shadow-lg'
+                    : 'text-white/50 hover:bg-white/[0.08] hover:text-white/80 hover:scale-105'
                 }`}
                 aria-label="I like this"
               >
@@ -554,10 +555,10 @@ function Player({ type }) {
                 onClick={() =>
                   setRating(ratingMediaKey, getRating(ratingMediaKey) === 'love' ? null : 'love')
                 }
-                className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 ${
                   getRating(ratingMediaKey) === 'love'
-                    ? 'bg-aura-red text-white'
-                    : 'text-gray-300 hover:bg-white/10'
+                    ? 'bg-aura-red text-white scale-110 shadow-glow-red'
+                    : 'text-white/50 hover:bg-white/[0.08] hover:text-white/80 hover:scale-105'
                 }`}
                 aria-label="I really like this"
               >
@@ -567,6 +568,7 @@ function Player({ type }) {
           </div>
 
           <div className="space-y-1 text-xs text-aura-muted md:text-sm" />
+
 
           {details?.credits?.cast?.length > 0 && (
             <div className="mt-6">

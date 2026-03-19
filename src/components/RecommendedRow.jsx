@@ -9,6 +9,9 @@ import {
   getTvKeywords,
   getSimilarMovies,
   getSimilarTv,
+  getMovieRecommendations,
+  getTvRecommendations,
+  discoverByNetwork,
   discoverAdvanced
 } from '../api/tmdb.js';
 import { getGroqPersonalizedPicks } from '../api/groqRecommendations.js';
@@ -249,51 +252,114 @@ function RecommendedRow() {
           const lovedGenreSet = new Set(
             (lovedDetails?.genres || []).map((g) => Number(g.id)).filter(Boolean)
           );
+          // Extract network IDs for TV shows (e.g. FOX, Adult Swim, Cartoon Network)
+          const lovedNetworkIds = (lovedDetails?.networks || [])
+            .map((n) => n.id)
+            .filter(Boolean);
+          const lovedOriginCountry = (lovedDetails?.origin_country || [])[0] || null;
 
           const scoreAgainstLoved = (item) => {
-            // Keep recommendations close to seed vibe:
-            // same media type > same language > genre overlap > popularity.
             let score = 0;
-            if ((item.media_type || (item.first_air_date ? 'tv' : 'movie')) === meta.media_type) {
-              score += 12;
-            }
+            const itemType = item.media_type || (item.first_air_date ? 'tv' : 'movie');
+
+            // Same media type is essential
+            if (itemType === meta.media_type) score += 15;
+
+            // Language match is critical — prevents anime for western shows
             if (lovedLanguage && item.original_language === lovedLanguage) {
-              score += 10;
+              score += 20;
             } else if (lovedLanguage && item.original_language !== lovedLanguage) {
-              score -= 8;
+              score -= 30; // Heavy penalty for language mismatch
             }
 
+            // Origin country match
+            const itemCountry = (item.origin_country || [])[0];
+            if (lovedOriginCountry && itemCountry === lovedOriginCountry) {
+              score += 8;
+            }
+
+            // Genre overlap — require strong overlap
             const itemGenreIds = Array.isArray(item.genre_ids) ? item.genre_ids : [];
             let overlap = 0;
             for (const gid of itemGenreIds) {
               if (lovedGenreSet.has(Number(gid))) overlap += 1;
             }
-            score += overlap * 4;
+            score += overlap * 5;
 
-            // Very soft popularity tie-break.
+            // Bonus for same network (e.g. other FOX shows for Family Guy)
+            if (item._fromNetwork) score += 10;
+
+            // Soft popularity tie-break
             score += Math.min(5, Math.floor((item.popularity || 0) / 150));
             return score;
           };
 
-          const similar =
-            meta.media_type === 'movie'
+          // Use /recommendations first (better quality), then /similar as fallback
+          let primaryResults = meta.media_type === 'movie'
+            ? await getMovieRecommendations(meta.id)
+            : await getTvRecommendations(meta.id);
+
+          // If recommendations are sparse, supplement with /similar
+          if ((primaryResults || []).length < 10) {
+            const similar = meta.media_type === 'movie'
               ? await getSimilarMovies(meta.id)
               : await getSimilarTv(meta.id);
+            const existingIds = new Set((primaryResults || []).map((r) => r.id));
+            for (const item of (similar || [])) {
+              if (!existingIds.has(item.id)) {
+                primaryResults.push(item);
+                existingIds.add(item.id);
+              }
+            }
+          }
 
-          const normalized = (similar || [])
-            .filter((i) => i && i.id && !likedIdSet.has(Number(i.id)))
-            // Hard lock: if seed has known language, force same language.
+          // For TV shows, also discover from the same network as supplementary pool
+          let networkResults = [];
+          if (meta.media_type === 'tv' && lovedNetworkIds.length > 0) {
+            try {
+              const genreStr = lovedGenreSet.size > 0
+                ? Array.from(lovedGenreSet).join(',')
+                : undefined;
+              networkResults = await discoverByNetwork({
+                networkId: lovedNetworkIds[0],
+                mediaType: 'tv',
+                with_genres: genreStr,
+                with_original_language: lovedLanguage || undefined
+              });
+              // Tag these so we can give them a scoring bonus
+              networkResults = (networkResults || []).map((item) => ({ ...item, _fromNetwork: true }));
+            } catch {
+              // ignore network discovery failures
+            }
+          }
+
+          // Merge all candidate pools, deduplicate
+          const allCandidates = [...(primaryResults || []), ...networkResults];
+          const seenIds = new Set();
+          const dedupedCandidates = [];
+          for (const item of allCandidates) {
+            if (!item || !item.id || seenIds.has(item.id)) continue;
+            seenIds.add(item.id);
+            dedupedCandidates.push(item);
+          }
+
+          const normalized = dedupedCandidates
+            .filter((i) => !likedIdSet.has(Number(i.id)))
+            // HARD FILTER: if seed has known language, force same language
+            // This single filter prevents anime showing up for western animation
             .filter((item) => {
               if (!lovedLanguage) return true;
               return item.original_language === lovedLanguage;
             })
-            // Hard lock: must overlap at least one seed genre (when seed has genres).
+            // HARD FILTER: must overlap at least 1 seed genre (2 if seed has 3+ genres)
             .filter((item) => {
               if (!lovedGenreSet.size) return true;
               const gids = Array.isArray(item.genre_ids) ? item.genre_ids : [];
-              return gids.some((gid) => lovedGenreSet.has(Number(gid)));
+              const overlap = gids.filter((gid) => lovedGenreSet.has(Number(gid))).length;
+              const minOverlap = lovedGenreSet.size >= 3 ? 2 : 1;
+              return overlap >= minOverlap;
             })
-            // If seed is TV, stay TV-focused.
+            // If seed is TV, stay TV-focused
             .filter((item) =>
               meta.media_type === 'tv'
                 ? (item.media_type || (item.first_air_date ? 'tv' : 'movie')) === 'tv'
@@ -310,6 +376,7 @@ function RecommendedRow() {
               poster_path: item.poster_path,
               media_type: item.media_type || (item.first_air_date ? 'tv' : 'movie'),
               original_language: item.original_language,
+              origin_country: item.origin_country,
               genre_ids: item.genre_ids,
               overview: item.overview
             }));

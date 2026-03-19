@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 html,
 body,
 #root {
@@ -12,18 +14,23 @@ body {
   @apply bg-aura-bg text-white font-sans antialiased;
 }
 
+/* === Scrollbar === */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0e17;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -34,25 +41,229 @@ body {
   scrollbar-width: none;
 }
 
+/* === Keyframe Animations === */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes card-shine {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(200%) rotate(25deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 @layer components {
+  /* === Glass Morphism === */
   .aura-glass {
-    @apply bg-black bg-opacity-40 backdrop-blur-xl border border-white border-opacity-10;
+    @apply bg-black/40 backdrop-blur-2xl border border-white/[0.08];
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 20px 50px -12px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .aura-panel {
-    @apply rounded-xl bg-aura-surface bg-opacity-70 ring-1 ring-white ring-opacity-10 backdrop-blur-xl;
+    @apply rounded-2xl bg-aura-surface/70 ring-1 ring-white/[0.08] backdrop-blur-2xl;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.03),
+      0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
+  /* === Buttons === */
   .aura-icon-button {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full bg-black bg-opacity-40 text-white text-opacity-80 ring-1 ring-white ring-opacity-10 backdrop-blur-xl transition hover:bg-opacity-60 hover:text-white hover:text-opacity-100;
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full
+           bg-black/40 text-white/80 ring-1 ring-white/[0.08]
+           backdrop-blur-2xl transition-all duration-300;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .aura-icon-button:hover {
+    @apply bg-black/60 text-white ring-white/[0.15];
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    transform: scale(1.05);
   }
 
+  .aura-btn-primary {
+    @apply inline-flex items-center gap-2.5 rounded-xl
+           bg-white px-7 py-3.5 text-sm font-bold text-black
+           shadow-lg transition-all duration-300;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 10px 30px -5px rgba(255, 255, 255, 0.15);
+  }
+  .aura-btn-primary:hover {
+    @apply bg-white/95;
+    transform: translateY(-1px);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.15),
+      0 20px 40px -10px rgba(255, 255, 255, 0.2);
+  }
+
+  .aura-btn-secondary {
+    @apply inline-flex items-center gap-2.5 rounded-xl
+           bg-white/[0.08] px-6 py-3.5 text-sm font-semibold text-white
+           backdrop-blur-2xl ring-1 ring-white/[0.12] transition-all duration-300;
+  }
+  .aura-btn-secondary:hover {
+    @apply bg-white/[0.14] ring-white/[0.2];
+    transform: translateY(-1px);
+  }
+
+  /* === Section Title === */
   .aura-section-title {
-    @apply flex items-center gap-3 text-xl font-bold tracking-wide text-white text-opacity-95 md:text-2xl;
+    @apply flex items-center gap-3 text-xl font-bold tracking-wide text-white/95 md:text-2xl;
   }
   .aura-section-title::before {
     content: '';
-    @apply h-4 w-[2px] rounded-full bg-aura-red;
+    @apply h-5 w-[3px] rounded-full;
+    background: linear-gradient(180deg, #E50914 0%, #FF6B6B 100%);
+    box-shadow: 0 0 12px rgba(229, 9, 20, 0.5);
+  }
+
+  /* === Card Effects === */
+  .aura-card {
+    @apply relative flex-shrink-0 overflow-hidden rounded-xl
+           bg-aura-surface/30 ring-1 ring-white/[0.08]
+           transition-all duration-500 ease-out;
+    will-change: transform, box-shadow;
+  }
+  .aura-card:hover {
+    @apply ring-white/[0.18] z-20;
+    transform: scale(1.08) translateY(-6px);
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.7),
+      0 0 40px -8px rgba(229, 9, 20, 0.15);
+  }
+
+  .aura-card-shine {
+    @apply pointer-events-none absolute inset-0 z-10;
+    overflow: hidden;
+  }
+  .aura-card-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 30%;
+    height: 200%;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%) rotate(25deg);
+    transition: none;
+  }
+  .aura-card:hover .aura-card-shine::after {
+    animation: card-shine 0.8s ease-out forwards;
+  }
+
+  /* === Glow Effects === */
+  .aura-glow-red {
+    box-shadow: 0 0 30px -5px rgba(229, 9, 20, 0.4);
+  }
+
+  .aura-glow-surface {
+    box-shadow: 0 0 40px -10px rgba(28, 36, 49, 0.8);
+  }
+
+  /* === Rating Badge === */
+  .aura-rating-badge {
+    @apply inline-flex items-center gap-1 rounded-md
+           px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide;
+    background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.5) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* === Skeleton Loading === */
+  .aura-skeleton {
+    @apply rounded-xl;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  /* === Genre Pill === */
+  .aura-genre-pill {
+    @apply inline-flex items-center rounded-full
+           bg-white/[0.08] px-3 py-1 text-[0.7rem] font-medium
+           text-white/70 ring-1 ring-white/[0.06]
+           transition-colors duration-200;
+  }
+  .aura-genre-pill:hover {
+    @apply bg-white/[0.14] text-white/90;
+  }
+
+  /* === Gradient Text === */
+  .aura-gradient-text {
+    background: linear-gradient(135deg, #FFFFFF 0%, #E0E0E0 50%, #FFFFFF 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* === Animated Gradient Border === */
+  .aura-gradient-border {
+    position: relative;
+  }
+  .aura-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(229,9,20,0.3), transparent, rgba(229,9,20,0.15));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* === Tooltip === */
+  .aura-tooltip {
+    @apply absolute left-full ml-3 rounded-lg bg-aura-surface/95
+           px-3 py-1.5 text-xs font-medium text-white
+           ring-1 ring-white/[0.1] backdrop-blur-xl
+           opacity-0 pointer-events-none
+           transition-all duration-200 whitespace-nowrap;
+    transform: translateX(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .group:hover .aura-tooltip {
+    @apply opacity-100;
+    transform: translateX(0);
   }
 }
-

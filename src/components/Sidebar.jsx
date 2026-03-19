@@ -4,7 +4,7 @@ import { useProfiles } from '../context/ProfileContext.jsx';
 
 function Icon({ children }) {
   return (
-    <span className="inline-flex h-7 w-7 items-center justify-center">
+    <span className="inline-flex h-7 w-7 items-center justify-center transition-transform duration-300 group-hover:scale-110">
       {children}
     </span>
   );
@@ -19,18 +19,63 @@ function RailLink({ to, label, expanded, onClick, children }) {
         `group relative flex h-11 w-full items-center gap-3 rounded-xl transition-all duration-300 ${
           isActive
             ? 'text-aura-red font-semibold'
-            : 'text-white text-opacity-70 hover:text-opacity-100'
+            : 'text-white/60 hover:text-white/95'
         } ${expanded ? 'justify-start px-3' : 'justify-center px-0'}`
       }
       aria-label={label}
       title={label}
     >
-      <span className="pointer-events-none absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 rounded-full bg-aura-red opacity-0 transition-opacity duration-300 group-[.active]:opacity-100" />
+      {({ isActive }) => (
+        <>
+          {/* Active indicator with glow */}
+          <span
+            className={`pointer-events-none absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full transition-all duration-300 ${
+              isActive
+                ? 'opacity-100'
+                : 'opacity-0'
+            }`}
+            style={isActive ? {
+              background: 'linear-gradient(180deg, #E50914 0%, #FF6B6B 100%)',
+              boxShadow: '0 0 12px rgba(229, 9, 20, 0.6)',
+            } : {}}
+          />
+          {children}
+          <span className={`min-w-0 truncate text-sm font-medium tracking-wide transition-all duration-300 ${expanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 w-0'}`}>
+            {label}
+          </span>
+          {/* Tooltip when collapsed */}
+          {!expanded && (
+            <span className="aura-tooltip">
+              {label}
+            </span>
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+function SidebarButton({ onClick, label, expanded, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative flex h-11 w-full items-center gap-3 rounded-xl text-white/60 transition-all duration-300 hover:bg-white/[0.05] hover:text-white/95 ${
+        expanded ? 'justify-start px-3' : 'justify-center px-0'
+      }`}
+      aria-label={label}
+      title={label}
+    >
       {children}
-      <span className={`min-w-0 truncate text-sm font-medium tracking-wide transition-opacity duration-200 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
+      <span className={`min-w-0 truncate text-sm font-medium tracking-wide transition-all duration-300 ${expanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 w-0'}`}>
         {label}
       </span>
-    </NavLink>
+      {!expanded && (
+        <span className="aura-tooltip">
+          {label}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -41,26 +86,33 @@ function Sidebar({ onOpenSearch, onOpenFriends }) {
   return (
     <aside className="fixed left-3 top-1/2 z-50 hidden -translate-y-1/2 md:block">
       <div
-        className={`aura-glass flex flex-col rounded-2xl p-3 shadow-cinematic transition-all duration-300 ${
-          expanded ? 'w-52' : 'w-20'
+        className={`aura-glass flex flex-col rounded-2xl p-3 transition-all duration-400 ease-out ${
+          expanded ? 'w-52' : 'w-[4.5rem]'
         }`}
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
       >
-        <div className="mb-1 flex items-center justify-center px-1 py-1">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-lg font-black tracking-tight text-aura-red">
+        {/* Logo */}
+        <div className="mb-2 flex items-center justify-center px-1 py-1.5">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <span
+              className="text-xl font-black tracking-tight transition-all duration-300 group-hover:scale-110"
+              style={{
+                background: 'linear-gradient(135deg, #E50914 0%, #FF6B6B 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 0 8px rgba(229, 9, 20, 0.4))',
+              }}
+            >
               A
             </span>
-            {expanded && (
-              <span className="text-sm font-semibold tracking-wide text-white text-opacity-90">
-                Aura
-              </span>
-            )}
+            <span className={`text-sm font-bold tracking-wider text-white/90 transition-all duration-300 ${expanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 w-0'}`}>
+              Aura
+            </span>
           </Link>
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
         <RailLink to="/" label="Home" expanded={expanded}>
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -70,35 +122,16 @@ function Sidebar({ onOpenSearch, onOpenFriends }) {
           </Icon>
         </RailLink>
 
-        <button
-          type="button"
-          onClick={onOpenSearch}
-          className={`group relative flex h-11 w-full items-center gap-3 rounded-xl text-white text-opacity-70 transition-all duration-300 hover:bg-white hover:bg-opacity-5 hover:text-opacity-100 ${
-            expanded ? 'justify-start px-3' : 'justify-center px-0'
-          }`}
-          aria-label="Search"
-          title="Search"
-        >
+        <SidebarButton onClick={onOpenSearch} label="Search" expanded={expanded}>
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75 19.5 19.5" />
               <circle cx="11" cy="11" r="6" />
             </svg>
           </Icon>
-          <span className={`min-w-0 truncate text-sm font-medium tracking-wide transition-opacity duration-200 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
-            Search
-          </span>
-        </button>
+        </SidebarButton>
 
-        <button
-          type="button"
-          onClick={onOpenFriends}
-          className={`group relative flex h-11 w-full items-center gap-3 rounded-xl text-white text-opacity-70 transition-all duration-300 hover:bg-white hover:bg-opacity-5 hover:text-opacity-100 ${
-            expanded ? 'justify-start px-3' : 'justify-center px-0'
-          }`}
-          aria-label="Friends"
-          title="Friends"
-        >
+        <SidebarButton onClick={onOpenFriends} label="Friends" expanded={expanded}>
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -107,10 +140,7 @@ function Sidebar({ onOpenSearch, onOpenFriends }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </Icon>
-          <span className={`min-w-0 truncate text-sm font-medium tracking-wide transition-opacity duration-200 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
-            Friends
-          </span>
-        </button>
+        </SidebarButton>
 
         <RailLink to="/movies" label="Movies" expanded={expanded}>
           <Icon>
@@ -140,11 +170,12 @@ function Sidebar({ onOpenSearch, onOpenFriends }) {
         </RailLink>
         </div>
 
-        <div className="my-2 h-px w-full bg-white bg-opacity-10" />
+        {/* Profile divider & link */}
+        <div className="my-2.5 h-px w-full bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
 
         <Link
           to="/profile"
-          className={`flex items-center gap-3 rounded-xl py-2 text-white text-opacity-75 transition hover:bg-white hover:bg-opacity-5 hover:text-opacity-100 ${
+          className={`group flex items-center gap-3 rounded-xl py-2 text-white/70 transition-all duration-300 hover:bg-white/[0.05] hover:text-white/95 ${
             expanded ? 'px-3 justify-start' : 'px-0 justify-center'
           }`}
           title="Profile"
@@ -152,13 +183,13 @@ function Sidebar({ onOpenSearch, onOpenFriends }) {
           <img
             src={currentProfile?.avatar}
             alt={currentProfile?.name || 'Profile'}
-            className="h-8 w-8 rounded-full object-cover ring-1 ring-white ring-opacity-10"
+            className="h-8 w-8 rounded-full object-cover ring-2 ring-white/[0.08] transition-all duration-300 group-hover:ring-aura-red/40"
           />
-          <div className={`min-w-0 transition-opacity duration-200 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
-            <p className="truncate text-sm font-semibold text-white text-opacity-90">
+          <div className={`min-w-0 transition-all duration-300 ${expanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 w-0'}`}>
+            <p className="truncate text-sm font-semibold text-white/90">
               {currentProfile?.name || 'Profile'}
             </p>
-            <p className="truncate text-xs text-aura-muted">Settings</p>
+            <p className="truncate text-[0.65rem] text-white/40">Settings</p>
           </div>
         </Link>
       </div>
@@ -167,4 +198,3 @@ function Sidebar({ onOpenSearch, onOpenFriends }) {
 }
 
 export default Sidebar;
-

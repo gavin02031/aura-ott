@@ -87,6 +87,8 @@ serve(async (req) => {
       genre_ids: Array.isArray(c.genre_ids) ? c.genre_ids.slice(0, 8) : [],
       vote_average: c.vote_average ?? null,
       popularity: c.popularity ?? null,
+      original_language: (c as any).original_language ?? null,
+      origin_country: Array.isArray((c as any).origin_country) ? (c as any).origin_country.slice(0, 2) : [],
     }));
 
     const prompt =
@@ -99,6 +101,9 @@ serve(async (req) => {
       `Rules:\n` +
       `- picks must contain up to ${limitPerRow} candidate IDs from candidates only.\n` +
       `- prioritize diversity, novelty, and match quality.\n` +
+      `- CRITICAL: Match the cultural style and tone of liked content. Western animated sitcoms (Family Guy, American Dad, Simpsons) should match OTHER western animated sitcoms, NOT anime or Japanese animation.\n` +
+      `- Prioritize candidates from the same country, language, and network as liked items.\n` +
+      `- Same original_language is very important. Do NOT mix English-language content with non-English content.\n` +
       `- keep rowTitle short and premium.\n\n` +
       `likedItems JSON:\n${JSON.stringify(trimmedLiked)}\n\n` +
       `candidates JSON:\n${JSON.stringify(trimmedCandidates)}`;
