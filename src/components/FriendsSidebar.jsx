@@ -1,6 +1,7 @@
 import React from 'react';
 import { usePresence } from '../hooks/usePresence.js';
 import { supabase } from '../lib/supabase.js';
+import { useAcceptedFriends } from '../hooks/useAcceptedFriends.js';
 
 export default function FriendsSidebar({
   open,
@@ -8,6 +9,12 @@ export default function FriendsSidebar({
   onInvite
 }) {
   const { onlineFriends } = usePresence();
+  const { friends } = useAcceptedFriends();
+
+  const onlineIds = React.useMemo(
+    () => new Set((onlineFriends ?? []).map((f) => String(f.user_id))),
+    [onlineFriends]
+  );
 
   const [search, setSearch] = React.useState('');
   const [searchResults, setSearchResults] = React.useState([]);
@@ -258,44 +265,61 @@ export default function FriendsSidebar({
           )}
         </div>
 
-        {/* Online Friends */}
+        {/* Friends */}
         <div className="px-4 mt-7">
           <div className="text-xs font-bold tracking-wide text-white/70 mb-2">
-            Online Friends
+            My Friends
           </div>
 
-          {onlineFriends.length === 0 ? (
-            <p className="text-xs text-white/40">Nobody online right now.</p>
+          {friends.length === 0 ? (
+            <p className="text-xs text-white/40">
+              No friends yet. Add someone from “Search Users”.
+            </p>
           ) : (
             <div className="space-y-3">
-              {onlineFriends.map((f) => (
-                <div key={f.user_id} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative">
-                      <img
-                        src={f.avatar_url ?? '/default-avatar.png'}
-                        alt={f.username}
-                        className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10"
-                      />
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-[#0A0E17]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate">
-                        {f.username}
-                      </p>
-                      <p className="text-xs text-white/45">Online</p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onInvite?.(f.user_id)}
-                    className="rounded-xl border border-[#E50914]/60 px-3 py-2 text-xs font-semibold text-white/90 hover:border-[#E50914] hover:bg-[#E50914]/10 transition"
+              {friends.map((f) => {
+                const isOnline = onlineIds.has(String(f.id));
+                return (
+                  <div
+                    key={f.id}
+                    className="flex items-center justify-between gap-3"
                   >
-                    Invite to Watch
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative">
+                        <img
+                          src={f.avatar_url ?? '/default-avatar.png'}
+                          alt={f.username}
+                          className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10"
+                        />
+                        {isOnline && (
+                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-[#0A0E17]" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">
+                          {f.username}
+                        </p>
+                        <p className="text-xs text-white/45">
+                          {isOnline ? 'Online' : 'Offline'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onInvite?.(f.id)}
+                      disabled={!onInvite}
+                      className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                        onInvite
+                          ? 'border-[#E50914]/60 text-white/90 hover:border-[#E50914] hover:bg-[#E50914]/10'
+                          : 'border-white/10 text-white/35 cursor-not-allowed'
+                      }`}
+                    >
+                      Invite
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

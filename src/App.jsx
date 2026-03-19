@@ -19,6 +19,7 @@ import Startup from './components/Startup.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import FriendsSidebar from './components/FriendsSidebar.jsx';
 import WatchPartyInvitesLayer from './components/WatchPartyInvitesLayer.jsx';
+import GlobalPresenceTracker from './components/GlobalPresenceTracker.jsx';
 
 function App() {
   return (
@@ -57,17 +58,30 @@ function AppContent() {
     setTrailerState((prev) => ({ ...prev, open: false }));
   };
 
+  const invitesLayer = <WatchPartyInvitesLayer enabled />;
+
   if (showStartup) {
-    return <Startup onFinished={handleStartupFinish} />;
+    return (
+      <>
+        {invitesLayer}
+        <Startup onFinished={handleStartupFinish} />
+      </>
+    );
   }
 
   if (!currentProfile) {
-    return <Profiles />;
+    return (
+      <>
+        {invitesLayer}
+        <Profiles />
+      </>
+    );
   }
 
   return (
     <ProgressProvider>
       <MyListProvider>
+        <GlobalPresenceTracker />
         <div className="min-h-screen bg-aura-bg text-white">
           <Sidebar
             onOpenSearch={() => setShowSearch(true)}
@@ -108,8 +122,6 @@ function AppContent() {
               onClose={() => setShowFriends(false)}
             />
           )}
-
-          <WatchPartyInvitesLayer enabled />
         </div>
       </MyListProvider>
     </ProgressProvider>

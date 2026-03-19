@@ -285,8 +285,13 @@ function Player({ type }) {
             };
 
         const channel = supabase.channel(`invites-${targetUserId}`);
-        // Ensure the channel is fully subscribed before broadcasting.
-        await channel.subscribe();
+
+        // Wait until the realtime channel is subscribed before sending.
+        await new Promise((resolve) => {
+          channel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') resolve(true);
+          });
+        });
 
         channel.send({
           type: 'broadcast',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { usePresence } from '../hooks/usePresence.js';
+import { useAcceptedFriends } from '../hooks/useAcceptedFriends.js';
 
 function Avatar({ src, alt }) {
   return (
@@ -23,6 +24,11 @@ export default function WatchPartyChatPanel({
   contentLabel
 }) {
   const { onlineFriends } = usePresence();
+  const { friends } = useAcceptedFriends();
+  const onlineIds = React.useMemo(
+    () => new Set((onlineFriends ?? []).map((f) => String(f.user_id))),
+    [onlineFriends]
+  );
   const [chatText, setChatText] = React.useState('');
   const [showInvite, setShowInvite] = React.useState(false);
   const listRef = React.useRef(null);
@@ -177,33 +183,37 @@ export default function WatchPartyChatPanel({
             Invite Friends
           </p>
 
-          {onlineFriends.length === 0 ? (
-            <p className="text-xs text-white/40">No friends online right now.</p>
+          {friends.length === 0 ? (
+            <p className="text-xs text-white/40">
+              You don’t have any accepted friends yet.
+            </p>
           ) : (
             <div className="space-y-3">
-              {onlineFriends.map((f) => (
+              {friends.map((f) => (
                 <div
-                  key={f.user_id}
+                  key={f.id}
                   className="flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative">
                       <Avatar src={f.avatar_url} alt={f.username} />
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-[#141A24]" />
+                      {onlineIds.has(String(f.id)) && (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-[#141A24]" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-[0.7rem] font-semibold text-white/90 truncate">
                         {f.username}
                       </p>
                       <p className="text-[0.62rem] text-white/35 truncate">
-                        Online
+                        {onlineIds.has(String(f.id)) ? 'Online' : 'Offline'}
                       </p>
                     </div>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => onInviteToFriend?.(f.user_id)}
+                    onClick={() => onInviteToFriend?.(f.id)}
                     className="rounded-xl border border-[#E50914]/60 px-3 py-2 text-xs font-semibold text-white/90 hover:border-[#E50914] hover:bg-[#E50914]/10 transition"
                   >
                     Invite
