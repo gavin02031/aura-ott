@@ -34,13 +34,6 @@ if (rootEl) {
 }
 
 // PWA install support (Add to Home Screen / standalone)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .catch(() => {
-        // Non-fatal; iOS can still "Add to Home Screen" without SW caching.
-      });
-  });
-}
+// Note: this repo does not include a real `sw.js`, so registering it causes noisy runtime errors.
+// iOS can still "Add to Home Screen" using `manifest.webmanifest` and `apple-touch-icon`.
 
